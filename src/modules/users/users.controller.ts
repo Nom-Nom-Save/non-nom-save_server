@@ -11,7 +11,7 @@ export const getUser: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const user: MockUser | null = await getUserById(userId);
+    const user: MockUser | null = await getUserById(userId as string);
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
