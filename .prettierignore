@@ -1,0 +1,38 @@
+# Node modules
+node_modules/
+
+# Build / Output
+.next/
+out/
+dist/
+build/
+
+# Static files / generated assets
+public/
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+
+# Storybook build
+storybook-static/
+
+# Test / coverage outputs
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+*.snap
+
+# Misc
+.vscode/
+.DS_Store
+.env
+.env.local
+.env.*.local
+
+# CSS / SASS generated files
+*.css
