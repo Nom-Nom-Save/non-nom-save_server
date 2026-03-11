@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for non-nom-save-server-prod on 2026-03-11T19:06:10Z
+# fly.toml app configuration file generated for non-nom-save-server on 2026-03-11T19:35:59Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'non-nom-save-server-prod'
+app = 'non-nom-save-server'
 primary_region = 'iad'
 
 [build]
