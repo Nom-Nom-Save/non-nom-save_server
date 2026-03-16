@@ -22,7 +22,7 @@ export const establishments = pgTable('establishments', {
       sql`CASE 
       WHEN name IS NOT NULL 
        AND address IS NOT NULL
-       AND boundTO IS NOT NULL 
+       AND bound_to IS NOT NULL 
       THEN 'Active' 
       ELSE 'Inactive' 
     END`

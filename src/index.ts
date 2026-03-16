@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.config';
 import cookieParser from 'cookie-parser';
 import usersRoutes from './modules/users/users.routes';
+import adminRoutes from './modules/auth/auth.routes';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(express.json());
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/users', usersRoutes);
+app.use('/api/auth', adminRoutes);
 
 const PORT = parseInt(process.env.PORT || '10000', 10);
 const HOST = '0.0.0.0';
