@@ -1,3 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 
-export type ExpressHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;
+type Params = {
+  userId?: string;
+  establishmentId?: string;
+};
+
+export type ExpressHandler = (
+  req: Request<Params>,
+  res: Response,
+  next: NextFunction
+) => Promise<void>;
