@@ -1,7 +1,9 @@
-export interface MockUser {
-  id: string;
-  name: string;
+import { users } from '../../../database/schema/users.schema';
+import { InferSelectModel } from 'drizzle-orm';
+
+export type User = InferSelectModel<typeof users>;
+
+export type UpdateUserInput = Partial<{
+  fullName: string | null;
   email: string;
-  role: string;
-  createdAt: string;
-}
+}>;

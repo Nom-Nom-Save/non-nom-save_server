@@ -1,106 +1,95 @@
 import { Router } from 'express';
-import { getUser } from './users.controller';
+import { getUser, updateUserProfile } from './users.controller';
+import { userAuth } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UpdateUserInput:
+ *       type: object
+ *       properties:
+ *         fullName:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         email:
+ *           type: string
+ *         fullName:
+ *           type: string
+ *         isEmailVerified:
+ *           type: boolean
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ */
 
 /**
  * @swagger
  * /users/{userId}:
  *   get:
  *     summary: Get a user by ID
- *     description: Retrieves a single user from the mock database by their unique ID.
  *     tags: [Users]
  *     parameters:
  *       - in: path
  *         name: userId
  *         schema:
  *           type: string
+ *           format: uuid
  *         required: true
- *         description: The unique ID of the user
- *         example: "1"
  *     responses:
  *       200:
  *         description: User retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "User 1 was gotten successfully"
- *                 user:
- *                   $ref: '#/components/schemas/MockUser'
- *       400:
- *         description: Bad request - User ID is missing
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "User ID is required"
+ *               $ref: '#/components/schemas/User'
  *       404:
  *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "User not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Internal server error"
  */
+router.get('/:userId', getUser);
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     MockUser:
- *       type: object
- *       required:
- *         - id
- *         - name
- *         - email
- *         - role
- *         - createdAt
- *       properties:
- *         id:
+ * /users/{userId}:
+ *   patch:
+ *     summary: Update user profile
+ *     description: Requires user authentication. Can only update own profile.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
  *           type: string
- *           description: Unique identifier for the user
- *           example: "1"
- *         name:
- *           type: string
- *           description: Full name of the user
- *           example: "Alice Johnson"
- *         email:
- *           type: string
- *           format: email
- *           description: Email address of the user
- *           example: "alice@example.com"
- *         role:
- *           type: string
- *           enum: [admin, user, moderator]
- *           description: Role of the user in the system
- *           example: "admin"
- *         createdAt:
- *           type: string
- *           format: date-time
- *           description: Timestamp when the user was created
- *           example: "2024-01-15T10:00:00Z"
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateUserInput'
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not your profile or not a user
+ *       404:
+ *         description: User not found
  */
-
-router.get('/:userId', getUser);
+router.patch('/:userId', userAuth, updateUserProfile);
 
 export default router;
