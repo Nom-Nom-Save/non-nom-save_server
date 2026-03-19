@@ -1,5 +1,5 @@
 import { ExpressHandler } from '../../shared/types/express.type';
-import { extractErrorMessage } from '../../shared/utils/error.util';
+import { handleError } from '../../shared/utils/app.error';
 import * as authService from './auth.service';
 
 export const registerUser: ExpressHandler = async (req, res) => {
@@ -20,19 +20,7 @@ export const registerUser: ExpressHandler = async (req, res) => {
       email: normalizedEmail,
     });
   } catch (error) {
-    const errorMessage = extractErrorMessage(error);
-
-    if (errorMessage === 'User already exists') {
-      res.status(409).json({ message: 'User with this email already exists' });
-      return;
-    }
-
-    if (errorMessage === 'Establishment with such email already exists') {
-      res.status(409).json({ message: 'Establishment with such email already exists' });
-      return;
-    }
-
-    res.status(500).json({ message: 'Internal server error' });
+    handleError(res, error);
   }
 };
 
@@ -59,19 +47,7 @@ export const registerEstablishment: ExpressHandler = async (req, res) => {
       email: normalizedEmail,
     });
   } catch (error) {
-    const errorMessage = extractErrorMessage(error);
-
-    if (errorMessage === 'Establishment already exists') {
-      res.status(409).json({ message: 'Establishment with this email already exists' });
-      return;
-    }
-
-    if (errorMessage === 'User with such email already exists') {
-      res.status(409).json({ message: 'User with such email already exists' });
-      return;
-    }
-
-    res.status(500).json({ message: 'Internal server error' });
+    handleError(res, error);
   }
 };
 
@@ -106,20 +82,7 @@ export const verifyEmail: ExpressHandler = async (req, res) => {
 
     res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {
-    const errorMessage = extractErrorMessage(error);
-
-    const badRequestErrors = new Set([
-      'User not found',
-      'Email already verified',
-      'Invalid or expired verification code',
-    ]);
-
-    if (badRequestErrors.has(errorMessage)) {
-      res.status(400).json({ message: errorMessage });
-      return;
-    }
-
-    res.status(500).json({ message: 'Internal server error' });
+    handleError(res, error);
   }
 };
 
@@ -154,22 +117,7 @@ export const login: ExpressHandler = async (req, res) => {
 
     res.status(200).json({ message: 'Login successful', accessToken });
   } catch (error) {
-    const errorMessage = extractErrorMessage(error);
-
-    if (
-      errorMessage === 'No matches for users, please check your email or login' ||
-      errorMessage === 'No matches for establishment, please check your email or login'
-    ) {
-      res.status(401).json({ message: errorMessage });
-      return;
-    }
-
-    if (errorMessage === 'Please verify your email') {
-      res.status(403).json({ message: errorMessage });
-      return;
-    }
-
-    res.status(500).json({ message: 'Internal server error' });
+    handleError(res, error);
   }
 };
 
@@ -193,18 +141,104 @@ export const refreshToken: ExpressHandler = async (req, res) => {
 
     res.status(200).json({ message: 'Token refreshed successfully', accessToken });
   } catch (error) {
-    const errorMessage = extractErrorMessage(error);
+    handleError(res, error);
+  }
+};
 
-    if (errorMessage === 'Invalid or expired refresh token') {
-      res.status(401).json({ message: errorMessage });
+export const forgotPassword: ExpressHandler = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({
+        message: 'Email is required',
+      });
+
       return;
     }
 
-    if (errorMessage === 'User or establishment not found') {
-      res.status(404).json({ message: errorMessage });
+    if (typeof email !== 'string') {
+      res.status(400).json({ message: 'Invalid data format' });
       return;
     }
 
-    res.status(500).json({ message: 'Internal server error' });
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      res.status(400).json({ message: 'Invalid email format' });
+      return;
+    }
+
+    await authService.forgotPassword(normalizedEmail);
+
+    res.status(200).json({
+      message: 'Password reset code sent. Please check your email.',
+      email: normalizedEmail,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const verifyResetCode: ExpressHandler = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      res.status(400).json({ message: 'Email and code are required' });
+      return;
+    }
+
+    if (typeof email !== 'string' || typeof code !== 'string') {
+      res.status(400).json({ message: 'Invalid data format' });
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      res.status(400).json({ message: 'Invalid email format' });
+      return;
+    }
+
+    const trimmedCode = code.trim();
+    if (!/^\d{4}$/.test(trimmedCode)) {
+      res.status(400).json({ message: 'Code must contain only digits' });
+      return;
+    }
+
+    await authService.verifyResetCode(normalizedEmail, trimmedCode);
+
+    res.status(200).json({
+      message: 'Code verified. You can now reset your password.',
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const resetPassword: ExpressHandler = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      res.status(400).json({ message: 'Email and new password are required' });
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      res.status(400).json({ message: 'Invalid email format' });
+      return;
+    }
+
+    await authService.resetPassword(normalizedEmail, newPassword);
+
+    res.status(200).json({
+      message: 'Password successfully reset. You can now log in.',
+    });
+  } catch (error) {
+    handleError(res, error);
   }
 };
