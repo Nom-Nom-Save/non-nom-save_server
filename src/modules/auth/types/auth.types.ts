@@ -29,3 +29,8 @@ export interface LoginDto {
   password: string;
   loginType: LoginType;
 }
+
+export enum UserType {
+  USER = 'user',
+  ESTABLISHMENT = 'establishment',
+}
