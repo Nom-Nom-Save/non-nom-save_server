@@ -16,6 +16,12 @@ const router = Router();
  *         email:
  *           type: string
  *           format: email
+ *         notifyNearby:
+ *           type: boolean
+ *         notifyClosingSoon:
+ *           type: boolean
+ *         notifyNewItems:
+ *           type: boolean
  *     User:
  *       type: object
  *       properties:
@@ -27,6 +33,12 @@ const router = Router();
  *         fullName:
  *           type: string
  *         isEmailVerified:
+ *           type: boolean
+ *         notifyNearby:
+ *           type: boolean
+ *         notifyClosingSoon:
+ *           type: boolean
+ *         notifyNewItems:
  *           type: boolean
  *         createdAt:
  *           type: string
