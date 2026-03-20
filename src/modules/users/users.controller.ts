@@ -1,6 +1,28 @@
 import { ExpressHandler } from '../../shared/types/express.type';
 import { getUserById, updateUser } from './users.service';
 import { UpdateUserInput } from './types/users.type';
+import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+
+export const getMe: ExpressHandler = (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).authenticatedUser;
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return Promise.resolve();
+    }
+
+    res.status(200).json({
+      message: 'User profile retrieved successfully',
+      user,
+    });
+    return Promise.resolve();
+  } catch (error) {
+    console.error('Error in getMeController:', error);
+    res.status(500).json({ error: 'Internal server error' });
+    return Promise.resolve();
+  }
+};
 
 export const getUser: ExpressHandler = async (req, res) => {
   try {
@@ -31,7 +53,7 @@ export const getUser: ExpressHandler = async (req, res) => {
 export const updateUserProfile: ExpressHandler = async (req, res) => {
   try {
     const { userId } = req.params;
-    const authenticatedId = (req as any).user?.id;
+    const authenticatedId = (req as AuthenticatedRequest).user?.id;
 
     if (!userId) {
       res.status(400).json({ error: 'User ID is required' });

@@ -1,11 +1,8 @@
 import { pgTable, uuid, varchar, text, integer, timestamp } from 'drizzle-orm/pg-core';
-import { establishments } from './establishments.schema';
 
 export const boxes = pgTable('boxes', {
   id: uuid('id').primaryKey().defaultRandom(),
-  boundTo: uuid('bound_to')
-    .notNull()
-    .references(() => establishments.id, { onDelete: 'cascade' }),
+  boundTo: varchar('bound_to', { length: 255 }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   recommendedPrice: integer('recommended_price'),
