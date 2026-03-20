@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUser, updateUserProfile } from './users.controller';
+import { getUser, updateUserProfile, getMe } from './users.controller';
 import { userAuth } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
@@ -32,6 +32,28 @@ const router = Router();
  *           type: string
  *           format: date-time
  */
+
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Get currently authenticated user profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.get('/me', userAuth, getMe);
 
 /**
  * @swagger
