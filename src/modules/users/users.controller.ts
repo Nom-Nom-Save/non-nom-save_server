@@ -1,5 +1,11 @@
 import { ExpressHandler } from '../../shared/types/express.type';
-import { getUserById, updateUser } from './users.service';
+import {
+  getUserById,
+  updateUser,
+  addFavorite,
+  removeFavorite,
+  getFavorites,
+} from './users.service';
 import { UpdateUserInput } from './types/users.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 
@@ -86,6 +92,61 @@ export const updateUserProfile: ExpressHandler = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in updateUserProfile:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const addToFavorites: ExpressHandler = async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const { establishmentId } = req.body;
+
+    if (!establishmentId) {
+      res.status(400).json({ error: 'Establishment ID is required' });
+      return;
+    }
+
+    await addFavorite(user!.id, establishmentId);
+
+    res.status(201).json({ message: 'Establishment added to favorites' });
+  } catch (error) {
+    console.error('Error in addToFavorites:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const removeFromFavorites: ExpressHandler = async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const { establishmentId } = req.params;
+
+    if (!establishmentId) {
+      res.status(400).json({ error: 'Establishment ID is required' });
+      return;
+    }
+
+    const success = await removeFavorite(user!.id, establishmentId);
+
+    if (!success) {
+      res.status(404).json({ error: 'Favorite not found' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Establishment removed from favorites' });
+  } catch (error) {
+    console.error('Error in removeFromFavorites:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getMyFavorites: ExpressHandler = async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const favorites = await getFavorites(user!.id);
+
+    res.status(200).json({ favorites });
+  } catch (error) {
+    console.error('Error in getMyFavorites:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
