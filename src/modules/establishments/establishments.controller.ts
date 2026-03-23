@@ -1,11 +1,12 @@
 import { ExpressHandler } from '../../shared/types/express.type';
 import { updateEstablishment, getEstablishmentById } from './establishments.service';
 import { UpdateEstablishmentInput } from './types/establishments.type';
+import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 
 export const updateEstablishmentProfile: ExpressHandler = async (req, res) => {
   try {
     const { establishmentId } = req.params;
-    const authenticatedId = (req as any).user?.id;
+    const authenticatedId = (req as AuthenticatedRequest).user?.id;
 
     if (!establishmentId) {
       res.status(400).json({ error: 'Establishment ID is required' });

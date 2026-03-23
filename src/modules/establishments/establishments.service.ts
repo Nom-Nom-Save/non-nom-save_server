@@ -2,14 +2,37 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../database';
 import { establishments } from '../../database/schema/establishments.schema';
 import { Establishment, UpdateEstablishmentInput } from './types/establishments.type';
+import NodeGeocoder from 'node-geocoder';
 
 export const updateEstablishment = async (
   establishmentId: string,
   updateData: UpdateEstablishmentInput
 ): Promise<Establishment | null> => {
+  const dataToUpdate = { ...updateData };
+
+  if (updateData.address) {
+    const options: NodeGeocoder.Options = {
+      provider: 'openstreetmap',
+      language: 'en',
+    };
+
+    const geocoder = NodeGeocoder(options);
+
+    try {
+      const response = await geocoder.geocode(updateData.address);
+
+      if (response.length > 0 && response[0].latitude && response[0].longitude) {
+        dataToUpdate.latitude = String(response[0].latitude);
+        dataToUpdate.longitude = String(response[0].longitude);
+      }
+    } catch (error) {
+      console.error('Geocoding error during establishment update:', error);
+    }
+  }
+
   const updatedEstablishment = await db
     .update(establishments)
-    .set(updateData)
+    .set(dataToUpdate)
     .where(eq(establishments.id, establishmentId))
     .returning();
 
