@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { getUser, updateUserProfile, getMe } from './users.controller';
+import {
+  getUser,
+  updateUserProfile,
+  getMe,
+  addToFavorites,
+  removeFromFavorites,
+  getMyFavorites,
+} from './users.controller';
 import { userAuth } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
@@ -25,24 +32,14 @@ const router = Router();
  *     User:
  *       type: object
  *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         email:
- *           type: string
- *         fullName:
- *           type: string
- *         isEmailVerified:
- *           type: boolean
- *         notifyNearby:
- *           type: boolean
- *         notifyClosingSoon:
- *           type: boolean
- *         notifyNewItems:
- *           type: boolean
- *         createdAt:
- *           type: string
- *           format: date-time
+ *         id: { type: string, format: uuid }
+ *         email: { type: string }
+ *         fullName: { type: string }
+ *         isEmailVerified: { type: boolean }
+ *         notifyNearby: { type: boolean }
+ *         notifyClosingSoon: { type: boolean }
+ *         notifyNewItems: { type: boolean }
+ *         createdAt: { type: string, format: date-time }
  */
 
 /**
@@ -54,18 +51,57 @@ const router = Router();
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
- *         description: Current user profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: User not found
+ *       200: { description: Success }
  */
 router.get('/me', userAuth, getMe);
+
+/**
+ * @swagger
+ * /users/favorites:
+ *   get:
+ *     summary: Get user favorite establishments
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200: { description: Success }
+ *   post:
+ *     summary: Add establishment to favorites
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [establishmentId]
+ *             properties:
+ *               establishmentId: { type: string, format: uuid }
+ *     responses:
+ *       201: { description: Added }
+ */
+router.get('/favorites', userAuth, getMyFavorites);
+router.post('/favorites', userAuth, addToFavorites);
+
+/**
+ * @swagger
+ * /users/favorites/{establishmentId}:
+ *   delete:
+ *     summary: Remove establishment from favorites
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: establishmentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Removed }
+ */
+router.delete('/favorites/:establishmentId', userAuth, removeFromFavorites);
 
 /**
  * @swagger
@@ -76,28 +112,12 @@ router.get('/me', userAuth, getMe);
  *     parameters:
  *       - in: path
  *         name: userId
- *         schema:
- *           type: string
- *           format: uuid
  *         required: true
+ *         schema: { type: string, format: uuid }
  *     responses:
- *       200:
- *         description: User retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       404:
- *         description: User not found
- */
-router.get('/:userId', getUser);
-
-/**
- * @swagger
- * /users/{userId}:
+ *       200: { description: Success }
  *   patch:
  *     summary: Update user profile
- *     description: Requires user authentication. Can only update own profile.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -105,25 +125,11 @@ router.get('/:userId', getUser);
  *       - in: path
  *         name: userId
  *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/UpdateUserInput'
+ *         schema: { type: string, format: uuid }
  *     responses:
- *       200:
- *         description: Profile updated successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - Not your profile or not a user
- *       404:
- *         description: User not found
+ *       200: { description: Updated }
  */
+router.get('/:userId', getUser);
 router.patch('/:userId', userAuth, updateUserProfile);
 
 export default router;

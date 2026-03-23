@@ -7,6 +7,9 @@ import cookieParser from 'cookie-parser';
 import usersRoutes from './modules/users/users.routes';
 import adminRoutes from './modules/auth/auth.routes';
 import establishmentsRoutes from './modules/establishments/establishments.routes';
+import productsRoutes from './modules/products/products.routes';
+import boxesRoutes from './modules/boxes/boxes.routes';
+import menuRoutes from './modules/menu/menu.routes';
 
 dotenv.config();
 
@@ -29,6 +32,9 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/users', usersRoutes);
 app.use('/api/auth', adminRoutes);
 app.use('/api/establishments', establishmentsRoutes);
+app.use('/api/products', productsRoutes);
+app.use('/api/boxes', boxesRoutes);
+app.use('/api/menu', menuRoutes);
 
 const PORT = parseInt(process.env.PORT || '10000', 10);
 const HOST = '0.0.0.0';
