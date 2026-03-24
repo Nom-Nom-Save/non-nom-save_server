@@ -11,6 +11,7 @@ import productsRoutes from './modules/products/products.routes';
 import boxesRoutes from './modules/boxes/boxes.routes';
 import menuRoutes from './modules/menu/menu.routes';
 import ordersRoutes from './modules/orders/orders.routes';
+import metadataRoutes from './modules/metadata/metadata.routes';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/boxes', boxesRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('api/metadata', metadataRoutes);
 
 const PORT = parseInt(process.env.PORT || '10000', 10);
 const HOST = '0.0.0.0';

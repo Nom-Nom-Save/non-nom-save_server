@@ -1,7 +1,33 @@
 import { ExpressHandler } from '../../shared/types/express.type';
-import { updateEstablishment, getEstablishmentById } from './establishments.service';
+import {
+  updateEstablishment,
+  getEstablishmentById,
+  getAllEstablishments,
+  getEstablishmentsByCity,
+} from './establishments.service';
 import { UpdateEstablishmentInput } from './types/establishments.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+
+export const getEstablishments: ExpressHandler = async (req, res) => {
+  try {
+    const { city } = req.query;
+    let establishments;
+
+    if (city && typeof city === 'string') {
+      establishments = await getEstablishmentsByCity(city);
+    } else {
+      establishments = await getAllEstablishments();
+    }
+
+    res.status(200).json({
+      message: 'Establishments retrieved successfully',
+      establishments,
+    });
+  } catch (error) {
+    console.error('Error in getEstablishments:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 export const updateEstablishmentProfile: ExpressHandler = async (req, res) => {
   try {

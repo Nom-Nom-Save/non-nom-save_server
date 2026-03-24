@@ -1,8 +1,19 @@
-import { eq } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
 import { db } from '../../database';
 import { establishments } from '../../database/schema/establishments.schema';
 import { Establishment, UpdateEstablishmentInput } from './types/establishments.type';
 import NodeGeocoder from 'node-geocoder';
+
+export const getAllEstablishments = async (): Promise<Establishment[]> => {
+  return await db.select().from(establishments);
+};
+
+export const getEstablishmentsByCity = async (city: string): Promise<Establishment[]> => {
+  return await db
+    .select()
+    .from(establishments)
+    .where(like(establishments.address, `%${city}%`));
+};
 
 export const updateEstablishment = async (
   establishmentId: string,
