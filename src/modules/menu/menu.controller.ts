@@ -61,6 +61,29 @@ export const getPublicMenu: ExpressHandler = async (req, res) => {
   }
 };
 
+export const getMenuItem: ExpressHandler = async (req, res) => {
+  try {
+    const { menuId } = req.params;
+
+    if (!menuId) {
+      res.status(400).json({ message: 'Menu item ID is required' });
+      return;
+    }
+
+    const menuItem = await menuService.getMenuItemById(menuId as string);
+
+    if (!menuItem) {
+      res.status(404).json({ message: 'Menu item not found' });
+      return;
+    }
+
+    res.status(200).json({ menuItem });
+  } catch (error) {
+    console.error('Error getting menu item:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 export const changeStatus: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;

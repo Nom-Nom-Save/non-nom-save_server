@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { establishmentAuth } from '../../shared/middleware/auth.middleware';
-import { addToMenu, getMenu, changeStatus, getPublicMenu } from './menu.controller';
+import { addToMenu, getMenu, changeStatus, getPublicMenu, getMenuItem } from './menu.controller';
 
 const router = Router();
 
@@ -19,6 +19,23 @@ const router = Router();
  *       200: { description: Success }
  */
 router.get('/public/:establishmentId', getPublicMenu);
+
+/**
+ * @swagger
+ * /menu/item/{menuId}:
+ *   get:
+ *     summary: Get single menu item details
+ *     tags: [Menu]
+ *     parameters:
+ *       - in: path
+ *         name: menuId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Success }
+ *       404: { description: Menu item not found }
+ */
+router.get('/item/:menuId', getMenuItem);
 
 /**
  * @swagger

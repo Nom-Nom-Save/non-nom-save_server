@@ -22,5 +22,7 @@ export type MenuWithPrice = MenuItem & {
   itemDetails: {
     name: string | null;
     description: string | null;
+    types?: string[];
+    allergens?: string[];
   } | null;
 };
