@@ -13,6 +13,16 @@ export const registerUser: ExpressHandler = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      res.status(400).json({ message: 'Invalid email format' });
+      return;
+    }
+
+    if (password.length < 8) {
+      res.status(400).json({ message: 'Password must be at least 8 characters long' });
+      return;
+    }
+
     await authService.registerUser({ fullName, email: normalizedEmail, password });
 
     res.status(201).json({
@@ -34,6 +44,16 @@ export const registerEstablishment: ExpressHandler = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      res.status(400).json({ message: 'Invalid email format' });
+      return;
+    }
+
+    if (password.length < 8) {
+      res.status(400).json({ message: 'Password must be at least 8 characters long' });
+      return;
+    }
 
     await authService.registerEstablishment({
       establishmentName,
@@ -230,6 +250,11 @@ export const resetPassword: ExpressHandler = async (req, res) => {
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       res.status(400).json({ message: 'Invalid email format' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      res.status(400).json({ message: 'Password must be at least 8 characters long' });
       return;
     }
 

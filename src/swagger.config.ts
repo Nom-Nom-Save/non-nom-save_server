@@ -9,9 +9,9 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Bontė API',
+      title: 'Nom Nom Save API',
       version: '1.0.0',
-      description: 'API documentation for the Bontė application',
+      description: 'API documentation for the Nom Nom Save application',
       contact: {
         name: 'API Support',
         email: 'andrejsalogub3@gmail.com',
