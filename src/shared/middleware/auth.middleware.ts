@@ -4,8 +4,9 @@ import { db } from '../../database';
 import { establishments } from '../../database/schema/establishments.schema';
 import { users } from '../../database/schema/users.schema';
 import { eq } from 'drizzle-orm';
+import { Params } from '../types/express.type';
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request<Params, any, any, any> {
   establishment?: any;
   authenticatedUser?: any;
   user?: {
