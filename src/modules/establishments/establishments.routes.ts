@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { updateEstablishmentProfile, getEstablishment } from './establishments.controller';
+import {
+  updateEstablishmentProfile,
+  getEstablishment,
+  getEstablishments,
+} from './establishments.controller';
 import { establishmentAuth } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
@@ -68,6 +72,35 @@ const router = Router();
  *           type: string
  *           example: "Active"
  */
+
+/**
+ * @swagger
+ * /establishments:
+ *   get:
+ *     summary: Get all establishments or filter by city
+ *     tags: [Establishments]
+ *     parameters:
+ *       - in: query
+ *         name: city
+ *         schema:
+ *           type: string
+ *         description: City name to filter establishments by address
+ *     responses:
+ *       200:
+ *         description: List of establishments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 establishments:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Establishment'
+ */
+router.get('/', getEstablishments);
 
 /**
  * @swagger
