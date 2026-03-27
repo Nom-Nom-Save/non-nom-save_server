@@ -8,6 +8,7 @@ export type Box = InferSelectModel<typeof boxes> & {
 
 export type CreateBoxInput = {
   name: string;
+  picture?: string;
   description?: string;
   recommendedPrice?: number;
   quantityOfItems: number;

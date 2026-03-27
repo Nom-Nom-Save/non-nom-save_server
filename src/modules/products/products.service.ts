@@ -36,6 +36,7 @@ export const createProduct = async (data: CreateProductInput): Promise<Product> 
     return {
       id: product.id,
       name: product.name,
+      picture: product.picture,
       boundTo: product.boundTo,
       weight: product.weight,
       description: product.description,
@@ -73,6 +74,7 @@ const attachTypesAndAllergens = async (productList: RawProduct[]): Promise<Produ
   return productList.map(product => ({
     id: product.id,
     name: product.name,
+    picture: product.picture,
     boundTo: product.boundTo,
     weight: product.weight,
     description: product.description,

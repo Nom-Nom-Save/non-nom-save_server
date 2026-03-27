@@ -8,6 +8,7 @@ export type Product = InferSelectModel<typeof products> & {
 
 export type CreateProductInput = {
   name: string;
+  picture?: string;
   weight?: number;
   description?: string;
   recommendedPrice?: number;

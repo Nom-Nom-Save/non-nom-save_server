@@ -36,6 +36,7 @@ export const createBox = async (data: CreateBoxInput): Promise<Box> => {
     return {
       id: box.id,
       name: box.name,
+      picture: box.picture,
       boundTo: box.boundTo,
       description: box.description,
       recommendedPrice: box.recommendedPrice,
@@ -75,6 +76,7 @@ const attachTypesAndProducts = async (boxList: RawBox[]): Promise<Box[]> => {
   return boxList.map(box => ({
     id: box.id,
     name: box.name,
+    picture: box.picture,
     boundTo: box.boundTo,
     description: box.description,
     recommendedPrice: box.recommendedPrice,
