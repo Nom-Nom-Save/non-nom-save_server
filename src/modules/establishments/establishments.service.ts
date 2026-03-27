@@ -1,4 +1,4 @@
-import { eq, like, sql } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 import { db } from '../../database';
 import { establishments } from '../../database/schema/establishments.schema';
 import {
@@ -30,7 +30,9 @@ export const getEstablishmentsByCity = async (city: string): Promise<PublicEstab
   return (await db
     .select(publicFields)
     .from(establishments)
-    .where(like(establishments.address, `%${city}%`))) as PublicEstablishment[];
+    .where(
+      and(eq(establishments.isEmailVerified, true), like(establishments.address, `%${city}%`))
+    )) as PublicEstablishment[];
 };
 
 export const getEstablishmentsByRadius = async (
@@ -47,7 +49,9 @@ export const getEstablishmentsByRadius = async (
   return (await db
     .select(publicFields)
     .from(establishments)
-    .where(sql`${distanceSql} <= ${radiusKm}`)) as PublicEstablishment[];
+    .where(
+      and(eq(establishments.isEmailVerified, true), sql`${distanceSql} <= ${radiusKm}`)
+    )) as PublicEstablishment[];
 };
 
 export const updateEstablishment = async (
