@@ -11,4 +11,5 @@ export const ordersDetails = pgTable('orders_details', {
     .notNull()
     .references(() => menuPrices.id, { onDelete: 'restrict' }),
   quantity: integer('quantity').notNull(),
+  price: integer('price').notNull(),
 });

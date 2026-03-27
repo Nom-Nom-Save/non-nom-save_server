@@ -60,18 +60,32 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
       .returning();
 
     for (const item of input.items) {
+      const dbItem = itemsData.find(d => d.menuPrice.id === item.menuPriceId);
+      if (!dbItem) continue;
+
+      const unitPrice = dbItem.menuPrice.discountPrice || dbItem.menuPrice.originalPrice;
+
       await tx.insert(ordersDetails).values({
         orderId: newOrder.id,
         menuPriceId: item.menuPriceId,
         quantity: item.quantity,
+        price: unitPrice,
       });
 
-      await tx
+      const [updatedPrice] = await tx
         .update(menuPrices)
         .set({
           availableQuantity: sql`${menuPrices.availableQuantity} - ${item.quantity}`,
         })
-        .where(eq(menuPrices.id, item.menuPriceId));
+        .where(eq(menuPrices.id, item.menuPriceId))
+        .returning();
+
+      if (updatedPrice.availableQuantity === 0) {
+        await tx
+          .update(menu)
+          .set({ status: 'SoldOut' })
+          .where(eq(menu.id, updatedPrice.menuItemId));
+      }
     }
 
     return newOrder;
@@ -114,7 +128,7 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
           ...d.detail,
           itemName,
           itemType: d.menuItem.itemType,
-          price: d.menuPrice.discountPrice || d.menuPrice.originalPrice,
+          price: d.detail.price,
         };
       })
     );
@@ -176,7 +190,7 @@ export const getEstablishmentOrders = async (
           ...d.detail,
           itemName,
           itemType: d.menuItem.itemType,
-          price: d.menuPrice.discountPrice || d.menuPrice.originalPrice,
+          price: d.detail.price,
         };
       })
     );
@@ -265,7 +279,7 @@ export const getOrderById = async (
         ...d.detail,
         itemName,
         itemType: d.menuItem.itemType,
-        price: d.menuPrice.discountPrice || d.menuPrice.originalPrice,
+        price: d.detail.price,
       };
     })
   );
