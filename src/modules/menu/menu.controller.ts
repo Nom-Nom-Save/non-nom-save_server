@@ -108,3 +108,30 @@ export const changeStatus: ExpressHandler = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export const updateMenu: ExpressHandler = async (req, res) => {
+  try {
+    const establishment = (req as AuthenticatedRequest).establishment;
+    const { id } = req.params;
+    const { totalQuantity, originalPrice, discountPrice, startTime, endTime } = req.body;
+
+    const success = await menuService.updateMenuItem(id!, establishment.id, {
+      totalQuantity,
+      originalPrice,
+      discountPrice,
+      startTime: startTime ? new Date(startTime) : undefined,
+      endTime: endTime ? new Date(endTime) : undefined,
+    });
+
+    if (!success) {
+      res.status(404).json({ message: 'Menu item not found' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Menu item updated successfully' });
+  } catch (error) {
+    console.error('Error updating menu item:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    res.status(400).json({ message });
+  }
+};

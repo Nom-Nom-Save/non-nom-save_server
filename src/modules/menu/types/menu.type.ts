@@ -15,7 +15,9 @@ export type AddToMenuInput = {
   endTime?: Date;
 };
 
-export type MenuStatus = 'Active' | 'Inactive';
+export type MenuStatus = 'Active' | 'Inactive' | 'SoldOut';
+
+export type UpdateMenuInput = Partial<Omit<AddToMenuInput, 'itemId' | 'itemType'>>;
 
 export type MenuWithPrice = MenuItem & {
   priceData: MenuItemPrice;

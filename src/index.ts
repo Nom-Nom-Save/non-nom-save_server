@@ -13,6 +13,7 @@ import menuRoutes from './modules/menu/menu.routes';
 import ordersRoutes from './modules/orders/orders.routes';
 import metadataRoutes from './modules/metadata/metadata.routes';
 import osmRoutes from './modules/osm/osm.routes';
+import { updateExpiredMenuItems, updateScheduledMenuItems } from './modules/menu/menu.service';
 
 dotenv.config();
 
@@ -47,4 +48,35 @@ const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
   console.log(`Server running on port ${PORT}`);
+  const runInitialUpdates = async () => {
+    try {
+      const deactivated = await updateExpiredMenuItems();
+      if (deactivated > 0)
+        console.log(`Initially updated ${deactivated} expired menu items to Inactive`);
+
+      const activated = await updateScheduledMenuItems();
+      if (activated > 0)
+        console.log(`Initially activated ${activated} scheduled menu items to Active`);
+    } catch (err) {
+      console.error('Error in initial menu items update:', err);
+    }
+  };
+
+  void runInitialUpdates();
+
+  setInterval(() => {
+    void (async () => {
+      try {
+        const deactivated = await updateExpiredMenuItems();
+        if (deactivated > 0)
+          console.log(`Automatically updated ${deactivated} expired menu items to Inactive`);
+
+        const activated = await updateScheduledMenuItems();
+        if (activated > 0)
+          console.log(`Automatically activated ${activated} scheduled menu items to Active`);
+      } catch (error) {
+        console.error('Error updating menu items:', error);
+      }
+    })();
+  }, 60000);
 });

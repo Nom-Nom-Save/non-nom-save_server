@@ -9,9 +9,8 @@ import { productAllergens } from '../../database/schema/product_allergens.schema
 import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
-import { establishments } from '../../database/schema/establishments.schema';
-import { eq, and, or, inArray } from 'drizzle-orm';
-import { AddToMenuInput, MenuStatus, MenuWithPrice } from './types/menu.type';
+import { eq, and, or, inArray, lt, lte, gt, isNull } from 'drizzle-orm';
+import { AddToMenuInput, MenuStatus, MenuWithPrice, UpdateMenuInput } from './types/menu.type';
 
 export const addItemToMenu = async (
   establishmentId: string,
@@ -41,7 +40,7 @@ export const addItemToMenu = async (
         establishmentId,
         itemId: data.itemId,
         itemType: data.itemType,
-        status: 'Active',
+        status: 'Inactive',
       })
       .returning();
 
@@ -206,4 +205,92 @@ export const updateMenuStatus = async (
     .returning();
 
   return result.length > 0;
+};
+
+export const updateMenuItem = async (
+  menuId: string,
+  establishmentId: string,
+  data: UpdateMenuInput
+): Promise<boolean> => {
+  return await db.transaction(async tx => {
+    const [menuItem] = await tx
+      .select()
+      .from(menu)
+      .where(and(eq(menu.id, menuId), eq(menu.establishmentId, establishmentId)));
+
+    if (!menuItem) {
+      throw new Error('Menu item not found or unauthorized');
+    }
+
+    if (menuItem.status === 'Active') {
+      throw new Error('Cannot update menu item while it is active');
+    }
+
+    const updateData: any = {};
+    if (data.totalQuantity !== undefined) {
+      updateData.totalQuantity = data.totalQuantity;
+      updateData.availableQuantity = data.totalQuantity;
+    }
+    if (data.originalPrice !== undefined) updateData.originalPrice = data.originalPrice;
+    if (data.discountPrice !== undefined) updateData.discountPrice = data.discountPrice;
+    if (data.startTime !== undefined) updateData.startTime = data.startTime;
+    if (data.endTime !== undefined) updateData.endTime = data.endTime;
+
+    const result = await tx
+      .update(menuPrices)
+      .set(updateData)
+      .where(eq(menuPrices.menuItemId, menuId))
+      .returning();
+
+    return result.length > 0;
+  });
+};
+
+export const updateExpiredMenuItems = async (): Promise<number> => {
+  const now = new Date();
+
+  const expiredItems = await db
+    .select({ id: menu.id })
+    .from(menu)
+    .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId))
+    .where(and(eq(menu.status, 'Active'), lt(menuPrices.endTime, now)));
+
+  if (expiredItems.length === 0) return 0;
+
+  const expiredIds = expiredItems.map(item => item.id);
+
+  const result = await db
+    .update(menu)
+    .set({ status: 'Inactive' })
+    .where(inArray(menu.id, expiredIds))
+    .returning();
+
+  return result.length;
+};
+
+export const updateScheduledMenuItems = async (): Promise<number> => {
+  const now = new Date();
+  const itemsToActivate = await db
+    .select({ id: menu.id })
+    .from(menu)
+    .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId))
+    .where(
+      and(
+        eq(menu.status, 'Inactive'),
+        lte(menuPrices.startTime, now),
+        or(gt(menuPrices.endTime, now), isNull(menuPrices.endTime))
+      )
+    );
+
+  if (itemsToActivate.length === 0) return 0;
+
+  const ids = itemsToActivate.map(item => item.id);
+
+  const result = await db
+    .update(menu)
+    .set({ status: 'Active' })
+    .where(inArray(menu.id, ids))
+    .returning();
+
+  return result.length;
 };
