@@ -2,11 +2,60 @@ import { ExpressHandler } from '../../shared/types/express.type';
 import {
   updateEstablishment,
   getEstablishmentById,
+  getEstablishmentByIdPrivate,
   getAllEstablishments,
   getEstablishmentsByCity,
+  getEstablishmentsByRadius,
 } from './establishments.service';
 import { UpdateEstablishmentInput } from './types/establishments.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+
+export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
+  try {
+    const establishmentId = (req as AuthenticatedRequest).user?.id;
+
+    if (!establishmentId) {
+      res.status(401).json({ error: 'Unauthorized: No establishment ID in token' });
+      return;
+    }
+
+    const establishment = await getEstablishmentByIdPrivate(establishmentId);
+
+    if (!establishment) {
+      res.status(404).json({ error: 'Establishment not found' });
+      return;
+    }
+
+    res.status(200).json({
+      message: 'Establishment profile retrieved successfully',
+      establishment,
+    });
+  } catch (error) {
+    console.error('Error in getEstablishmentPrivate:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
+  try {
+    const { lat, lon, radius } = req.query;
+
+    if (!lat || !lon || !radius) {
+      res.status(400).json({ error: 'lat, lon, and radius are required' });
+      return;
+    }
+
+    const nearby = await getEstablishmentsByRadius(Number(lat), Number(lon), Number(radius));
+
+    res.status(200).json({
+      message: 'Nearby establishments retrieved successfully',
+      establishments: nearby,
+    });
+  } catch (error) {
+    console.error('Error in getNearbyEstablishments:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 export const getEstablishments: ExpressHandler = async (req, res) => {
   try {

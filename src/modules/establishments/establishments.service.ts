@@ -1,18 +1,53 @@
-import { eq, like } from 'drizzle-orm';
+import { eq, like, sql } from 'drizzle-orm';
 import { db } from '../../database';
 import { establishments } from '../../database/schema/establishments.schema';
-import { Establishment, UpdateEstablishmentInput } from './types/establishments.type';
+import {
+  Establishment,
+  UpdateEstablishmentInput,
+  PublicEstablishment,
+} from './types/establishments.type';
 import NodeGeocoder from 'node-geocoder';
 
-export const getAllEstablishments = async (): Promise<Establishment[]> => {
-  return await db.select().from(establishments);
+const publicFields = {
+  id: establishments.id,
+  name: establishments.name,
+  description: establishments.description,
+  address: establishments.address,
+  latitude: establishments.latitude,
+  longitude: establishments.longitude,
+  workingHours: establishments.workingHours,
+  logo: establishments.logo,
+  banner: establishments.banner,
+  rating: establishments.rating,
+  createdAt: establishments.createdAt,
 };
 
-export const getEstablishmentsByCity = async (city: string): Promise<Establishment[]> => {
-  return await db
-    .select()
+export const getAllEstablishments = async (): Promise<PublicEstablishment[]> => {
+  return (await db.select(publicFields).from(establishments)) as PublicEstablishment[];
+};
+
+export const getEstablishmentsByCity = async (city: string): Promise<PublicEstablishment[]> => {
+  return (await db
+    .select(publicFields)
     .from(establishments)
-    .where(like(establishments.address, `%${city}%`));
+    .where(like(establishments.address, `%${city}%`))) as PublicEstablishment[];
+};
+
+export const getEstablishmentsByRadius = async (
+  lat: number,
+  lon: number,
+  radiusKm: number
+): Promise<PublicEstablishment[]> => {
+  const distanceSql = sql`6371 * acos(
+    cos(radians(${lat})) * cos(radians(latitude)) * 
+    cos(radians(longitude) - radians(${lon})) + 
+    sin(radians(${lat})) * sin(radians(latitude))
+  )`;
+
+  return (await db
+    .select(publicFields)
+    .from(establishments)
+    .where(sql`${distanceSql} <= ${radiusKm}`)) as PublicEstablishment[];
 };
 
 export const updateEstablishment = async (
@@ -55,6 +90,21 @@ export const updateEstablishment = async (
 };
 
 export const getEstablishmentById = async (
+  establishmentId: string
+): Promise<PublicEstablishment | null> => {
+  const result = (await db
+    .select(publicFields)
+    .from(establishments)
+    .where(eq(establishments.id, establishmentId))) as PublicEstablishment[];
+
+  if (!result || result.length === 0) {
+    return null;
+  }
+
+  return result[0];
+};
+
+export const getEstablishmentByIdPrivate = async (
   establishmentId: string
 ): Promise<Establishment | null> => {
   const result = await db

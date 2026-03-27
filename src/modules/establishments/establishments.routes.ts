@@ -3,6 +3,8 @@ import {
   updateEstablishmentProfile,
   getEstablishment,
   getEstablishments,
+  getNearbyEstablishments,
+  getEstablishmentPrivate,
 } from './establishments.controller';
 import { establishmentAuth } from '../../shared/middleware/auth.middleware';
 
@@ -32,6 +34,12 @@ const router = Router();
  *         workingHours:
  *           type: string
  *           nullable: true
+ *         logo:
+ *           type: string
+ *           nullable: true
+ *         banner:
+ *           type: string
+ *           nullable: true
  *         boundTo:
  *           type: string
  *           nullable: true
@@ -41,8 +49,6 @@ const router = Router();
  *         id:
  *           type: string
  *           format: uuid
- *         email:
- *           type: string
  *         name:
  *           type: string
  *         description:
@@ -57,21 +63,49 @@ const router = Router();
  *         workingHours:
  *           type: string
  *           nullable: true
+ *         logo:
+ *           type: string
+ *           nullable: true
+ *         banner:
+ *           type: string
+ *           nullable: true
  *         rating:
  *           type: string
  *           nullable: true
- *         boundTo:
- *           type: string
- *           nullable: true
- *         isEmailVerified:
- *           type: boolean
  *         createdAt:
  *           type: string
  *           format: date-time
- *         status:
- *           type: string
- *           example: "Active"
  */
+
+/**
+ * @swagger
+ * /establishments/profile:
+ *   get:
+ *     summary: Get the authenticated establishment's full profile
+ *     description: Requires establishment authentication.
+ *     tags: [Establishments]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 establishment:
+ *                   $ref: '#/components/schemas/Establishment'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Establishment not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/profile', establishmentAuth, getEstablishmentPrivate);
 
 /**
  * @swagger
@@ -101,6 +135,41 @@ const router = Router();
  *                     $ref: '#/components/schemas/Establishment'
  */
 router.get('/', getEstablishments);
+
+/**
+ * @swagger
+ * /establishments/nearby:
+ *   get:
+ *     summary: Get establishments within a radius of coordinates
+ *     tags: [Establishments]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: lon
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: radius
+ *         required: true
+ *         schema: { type: number }
+ *         description: Radius in kilometers
+ *     responses:
+ *       200:
+ *         description: List of nearby establishments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 establishments:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/Establishment' }
+ */
+router.get('/nearby', getNearbyEstablishments);
 
 /**
  * @swagger
