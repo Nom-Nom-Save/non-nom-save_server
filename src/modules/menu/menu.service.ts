@@ -63,12 +63,22 @@ export const addItemToMenu = async (
 
 const fetchItemDetails = async (itemId: string, itemType: string) => {
   const table = itemType === 'Product' ? products : boxes;
-  const [details] = await db
-    .select({ name: table.name, description: table.description })
-    .from(table)
-    .where(eq(table.id, itemId));
+  const [details] = await db.select().from(table).where(eq(table.id, itemId));
 
   if (!details) return null;
+
+  let weightInfo: string | null = null;
+  if (itemType === 'Product') {
+    const product = details as any;
+    if (product.weight) {
+      weightInfo = `${product.weight}g`;
+    }
+  } else {
+    const box = details as any;
+    if (box.minWeight !== null && box.maxWeight !== null) {
+      weightInfo = `from ${box.minWeight}g to ${box.maxWeight}g`;
+    }
+  }
 
   let types: string[] = [];
   let allergens: string[] = [];
@@ -123,7 +133,9 @@ const fetchItemDetails = async (itemId: string, itemType: string) => {
   }
 
   return {
-    ...details,
+    name: details.name,
+    description: details.description,
+    weightInfo,
     types,
     allergens: allergens.length > 0 ? allergens : undefined,
   };

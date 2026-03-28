@@ -58,6 +58,7 @@ const router = Router();
  *                         properties:
  *                           name: { type: string, nullable: true }
  *                           description: { type: string, nullable: true }
+ *                           weightInfo: { type: string, nullable: true }
  *                           types: { type: array, items: { type: string } }
  *                           allergens: { type: array, items: { type: string } }
  */
@@ -108,6 +109,7 @@ router.get('/public/:establishmentId', getPublicMenu);
  *                       properties:
  *                         name: { type: string, nullable: true }
  *                         description: { type: string, nullable: true }
+ *                         weightInfo: { type: string, nullable: true }
  *                         types: { type: array, items: { type: string } }
  *                         allergens: { type: array, items: { type: string } }
  *       404:
@@ -219,6 +221,7 @@ router.post('/', establishmentAuth, addToMenu);
  *                         properties:
  *                           name: { type: string, nullable: true }
  *                           description: { type: string, nullable: true }
+ *                           weightInfo: { type: string, nullable: true }
  *                           types: { type: array, items: { type: string } }
  *                           allergens: { type: array, items: { type: string } }
  */
