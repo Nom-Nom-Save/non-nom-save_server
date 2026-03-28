@@ -8,6 +8,7 @@ import {
   resetPassword,
   verifyEmail,
   verifyResetCode,
+  googleLogin,
 } from './auth.controller';
 
 const router = Router();
@@ -17,6 +18,7 @@ router.post('/register-establishment', registerEstablishment);
 router.post('/verify-email', verifyEmail);
 router.post('/refresh', refreshToken);
 router.post('/login', login);
+router.post('/google', googleLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/verify-code', verifyResetCode);
 router.post('/reset-password', resetPassword);
@@ -71,6 +73,65 @@ export default router;
  *               establishmentExists:
  *                 value:
  *                   message: "Establishment with such email already exists"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @swagger
+ * /auth/google:
+ *   post:
+ *     summary: Login with Google
+ *     description: Accepts a Google `id_token` from the frontend, verifies it server-side, creates or logs in a user or establishment, sets a httpOnly refresh cookie and returns an access token.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/GoogleLoginRequest'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         headers:
+ *           Set-Cookie:
+ *             description: httpOnly refreshToken cookie (7 days)
+ *             schema:
+ *               type: string
+ *               example: "refreshToken=eyJ...; HttpOnly; SameSite=Strict"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Login successful"
+ *                 accessToken:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Missing or invalid idToken
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               missing:
+ *                 value:
+ *                   message: "idToken is required"
+ *       401:
+ *         description: Invalid Google token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               message: "Invalid or expired Google token"
  *       500:
  *         description: Internal server error
  *         content:
@@ -590,6 +651,20 @@ export default router;
  *         loginType:
  *           type: string
  *           enum: [user, establishment]
+ *           example: "user"
+
+ *     GoogleLoginRequest:
+ *       type: object
+ *       required:
+ *         - idToken
+ *       properties:
+ *         idToken:
+ *           type: string
+ *           description: Google ID token (JWT) obtained from Google Identity Services on the frontend
+ *         loginType:
+ *           type: string
+ *           enum: [user, establishment]
+ *           description: Optional — choose whether to create/login a user or an establishment (defaults to `user`)
  *           example: "user"
  *
  *     ForgotPasswordRequest:

@@ -141,6 +141,35 @@ export const login: ExpressHandler = async (req, res) => {
   }
 };
 
+export const googleLogin: ExpressHandler = async (req, res) => {
+  try {
+    const { idToken, loginType } = req.body;
+
+    if (!idToken || typeof idToken !== 'string') {
+      res.status(400).json({ message: 'idToken is required' });
+      return;
+    }
+
+    const result = await authService.loginWithGoogle(idToken, loginType);
+
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      message: result.isNewUser ? 'Registration successful' : 'Login successful',
+      accessToken: result.accessToken,
+      user: result.user,
+      isNewUser: result.isNewUser,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 export const refreshToken: ExpressHandler = async (req, res) => {
   try {
     const token = req.cookies.refreshToken;
