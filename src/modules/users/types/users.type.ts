@@ -2,7 +2,10 @@ import { users } from '../../../database/schema/users.schema';
 import { favoriteEstablishments } from '../../../database/schema/favorite_establishments.schema';
 import { InferSelectModel } from 'drizzle-orm';
 
-export type User = InferSelectModel<typeof users>;
+export type User = Omit<InferSelectModel<typeof users>, 'password'> & {
+  successfulOrdersCount?: number;
+  totalSavings?: number;
+};
 export type Favorite = InferSelectModel<typeof favoriteEstablishments>;
 
 export type UpdateUserInput = Partial<{

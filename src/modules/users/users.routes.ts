@@ -40,6 +40,8 @@ const router = Router();
  *         notifyClosingSoon: { type: boolean }
  *         notifyNewItems: { type: boolean }
  *         createdAt: { type: string, format: date-time }
+ *         successfulOrdersCount: { type: integer }
+ *         totalSavings: { type: number }
  *     Favorite:
  *       type: object
  *       properties:

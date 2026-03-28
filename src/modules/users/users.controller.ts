@@ -9,24 +9,29 @@ import {
 import { UpdateUserInput } from './types/users.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 
-export const getMe: ExpressHandler = (req, res) => {
+export const getMe: ExpressHandler = async (req, res) => {
   try {
-    const user = (req as AuthenticatedRequest).authenticatedUser;
+    const authUser = (req as AuthenticatedRequest).user;
+
+    if (!authUser || authUser.role !== 'user') {
+      res.status(401).json({ error: 'Unauthorized: User only' });
+      return;
+    }
+
+    const user = await getUserById(authUser.id);
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
-      return Promise.resolve();
+      return;
     }
 
     res.status(200).json({
       message: 'User profile retrieved successfully',
       user,
     });
-    return Promise.resolve();
   } catch (error) {
     console.error('Error in getMeController:', error);
     res.status(500).json({ error: 'Internal server error' });
-    return Promise.resolve();
   }
 };
 
