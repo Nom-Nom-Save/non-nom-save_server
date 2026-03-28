@@ -17,5 +17,8 @@ export type FavoriteWithDetails = Favorite & {
   establishment: {
     name: string | null;
     address: string | null;
+    logo: string | null;
+    banner: string | null;
+    rating: string | null;
   };
 };

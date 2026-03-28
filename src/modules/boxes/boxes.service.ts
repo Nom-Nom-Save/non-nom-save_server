@@ -13,7 +13,31 @@ export const createBox = async (data: CreateBoxInput): Promise<Box> => {
   return await db.transaction(async tx => {
     const { typeIds, productIds, ...boxData } = data;
 
-    const [box] = await tx.insert(boxes).values(boxData).returning();
+    let minWeight: number | null = null;
+    let maxWeight: number | null = null;
+
+    if (productIds && productIds.length > 0) {
+      const productList = await tx
+        .select({ weight: products.weight })
+        .from(products)
+        .where(inArray(products.id, productIds));
+
+      const weights = productList.map(p => p.weight).filter((w): w is number => w !== null);
+
+      if (weights.length > 0) {
+        minWeight = Math.min(...weights) * boxData.quantityOfItems;
+        maxWeight = Math.max(...weights) * boxData.quantityOfItems;
+      }
+    }
+
+    const [box] = await tx
+      .insert(boxes)
+      .values({
+        ...boxData,
+        minWeight,
+        maxWeight,
+      })
+      .returning();
 
     if (typeIds && typeIds.length > 0) {
       await tx.insert(typeBoxes).values(
@@ -40,6 +64,8 @@ export const createBox = async (data: CreateBoxInput): Promise<Box> => {
       boundTo: box.boundTo,
       description: box.description,
       recommendedPrice: box.recommendedPrice,
+      minWeight: box.minWeight,
+      maxWeight: box.maxWeight,
       createdAt: box.createdAt,
       quantityOfItems: box.quantityOfItems,
       types: typeIds || [],
@@ -80,6 +106,8 @@ const attachTypesAndProducts = async (boxList: RawBox[]): Promise<Box[]> => {
     boundTo: box.boundTo,
     description: box.description,
     recommendedPrice: box.recommendedPrice,
+    minWeight: box.minWeight,
+    maxWeight: box.maxWeight,
     createdAt: box.createdAt,
     quantityOfItems: box.quantityOfItems,
     types: types.filter(t => t.boxId === box.id).map(t => t.typeName),
@@ -116,6 +144,46 @@ export const getBoxById = async (id: string): Promise<Box | null> => {
 export const updateBox = async (id: string, data: UpdateBoxInput): Promise<Box | null> => {
   return await db.transaction(async tx => {
     const { typeIds, productIds, ...boxData } = data;
+
+    if (productIds !== undefined || boxData.quantityOfItems !== undefined) {
+      const [existingBox] = await tx.select().from(boxes).where(eq(boxes.id, id));
+      if (existingBox) {
+        const currentProductIds =
+          productIds !== undefined
+            ? productIds
+            : (
+                await tx
+                  .select({ id: boxItems.productId })
+                  .from(boxItems)
+                  .where(eq(boxItems.boxId, id))
+              ).map(p => p.id);
+
+        const currentQuantity =
+          boxData.quantityOfItems !== undefined
+            ? boxData.quantityOfItems
+            : existingBox.quantityOfItems;
+
+        let minWeight: number | null = null;
+        let maxWeight: number | null = null;
+
+        if (currentProductIds.length > 0) {
+          const productList = await tx
+            .select({ weight: products.weight })
+            .from(products)
+            .where(inArray(products.id, currentProductIds));
+
+          const weights = productList.map(p => p.weight).filter((w): w is number => w !== null);
+
+          if (weights.length > 0) {
+            minWeight = Math.min(...weights) * currentQuantity;
+            maxWeight = Math.max(...weights) * currentQuantity;
+          }
+        }
+
+        (boxData as any).minWeight = minWeight;
+        (boxData as any).maxWeight = maxWeight;
+      }
+    }
 
     if (Object.keys(boxData).length > 0) {
       await tx.update(boxes).set(boxData).where(eq(boxes.id, id));

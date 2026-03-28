@@ -52,6 +52,9 @@ const router = Router();
  *           properties:
  *             name: { type: string, nullable: true }
  *             address: { type: string, nullable: true }
+ *             logo: { type: string, nullable: true }
+ *             banner: { type: string, nullable: true }
+ *             rating: { type: string, nullable: true }
  */
 
 /**

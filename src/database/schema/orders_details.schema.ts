@@ -1,4 +1,4 @@
-import { pgTable, uuid, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, integer, doublePrecision } from 'drizzle-orm/pg-core';
 import { orders } from './orders.schema';
 import { menuPrices } from './menu_prices.schema';
 
@@ -11,5 +11,7 @@ export const ordersDetails = pgTable('orders_details', {
     .notNull()
     .references(() => menuPrices.id, { onDelete: 'restrict' }),
   quantity: integer('quantity').notNull(),
-  price: integer('price').notNull(),
+  price: doublePrecision('price').notNull(),
+  originalPrice: doublePrecision('original_price').notNull(),
+  discountPrice: doublePrecision('discount_price'),
 });

@@ -61,6 +61,9 @@ export const getFavorites = async (userId: string): Promise<FavoriteWithDetails[
       establishment: {
         name: establishments.name,
         address: establishments.address,
+        logo: establishments.logo,
+        banner: establishments.banner,
+        rating: establishments.rating,
       },
     })
     .from(favoriteEstablishments)

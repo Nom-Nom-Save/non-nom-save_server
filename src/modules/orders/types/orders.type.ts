@@ -19,6 +19,16 @@ export type OrderWithDetails = Order & {
     itemName: string;
     itemType: string;
     price: number;
+    originalPrice: number;
+    discountPrice: number | null;
+    weight?: number | null;
+    minWeight?: number | null;
+    maxWeight?: number | null;
   })[];
   establishmentName?: string;
+  establishmentAddress?: string | null;
+  establishmentLogo?: string | null;
+  establishmentBanner?: string | null;
+  allergens?: string[];
+  totalOrderWeight?: number;
 };

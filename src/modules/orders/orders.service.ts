@@ -6,6 +6,9 @@ import { menu } from '../../database/schema/menu.schema';
 import { establishments } from '../../database/schema/establishments.schema';
 import { products } from '../../database/schema/products.schema';
 import { boxes } from '../../database/schema/boxes.schema';
+import { productAllergens } from '../../database/schema/product_allergens.schema';
+import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
+import { boxItems } from '../../database/schema/box_items.schema';
 import { eq, inArray, sql, and } from 'drizzle-orm';
 import { CreateOrderInput, OrderWithDetails } from './types/orders.type';
 
@@ -63,13 +66,15 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
       const dbItem = itemsData.find(d => d.menuPrice.id === item.menuPriceId);
       if (!dbItem) continue;
 
-      const unitPrice = dbItem.menuPrice.discountPrice || dbItem.menuPrice.originalPrice;
+      const paidPrice = dbItem.menuPrice.discountPrice || dbItem.menuPrice.originalPrice;
 
       await tx.insert(ordersDetails).values({
         orderId: newOrder.id,
         menuPriceId: item.menuPriceId,
         quantity: item.quantity,
-        price: unitPrice,
+        price: paidPrice,
+        originalPrice: dbItem.menuPrice.originalPrice,
+        discountPrice: dbItem.menuPrice.discountPrice,
       });
 
       const [updatedPrice] = await tx
@@ -113,28 +118,73 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
       .innerJoin(menu, eq(menuPrices.menuItemId, menu.id))
       .where(eq(ordersDetails.orderId, order.id));
 
+    const orderProductIds: string[] = [];
+    let totalOrderWeight = 0;
     const detailsWithNames = await Promise.all(
       details.map(async d => {
         let itemName = 'Unknown';
+        let weight: number | null = null;
+        let minWeight: number | null = null;
+        let maxWeight: number | null = null;
+
         if (d.menuItem.itemType === 'Product') {
           const [p] = await db.select().from(products).where(eq(products.id, d.menuItem.itemId));
           itemName = p?.name || 'Unknown Product';
+          weight = p?.weight;
+          if (p?.id) orderProductIds.push(p.id);
+
+          if (weight) {
+            totalOrderWeight += weight * d.detail.quantity;
+          }
         } else {
           const [b] = await db.select().from(boxes).where(eq(boxes.id, d.menuItem.itemId));
           itemName = b?.name || 'Unknown Box';
+          minWeight = b?.minWeight;
+          maxWeight = b?.maxWeight;
+
+          if (b?.id) {
+            const productsInBox = await db
+              .select({ productId: boxItems.productId })
+              .from(boxItems)
+              .where(eq(boxItems.boxId, b.id));
+            orderProductIds.push(...productsInBox.map(p => p.productId));
+          }
+
+          if (minWeight !== null && maxWeight !== null) {
+            const averageWeight = (minWeight + maxWeight) / 2;
+            totalOrderWeight += averageWeight * d.detail.quantity;
+          }
         }
 
         return {
           ...d.detail,
           itemName,
           itemType: d.menuItem.itemType,
-          price: d.detail.price,
+          weight,
+          minWeight,
+          maxWeight,
         };
       })
     );
 
+    let allergens: string[] = [];
+    if (orderProductIds.length > 0) {
+      const allAllergens = await db
+        .select({ name: typesOfAllergens.name })
+        .from(productAllergens)
+        .innerJoin(typesOfAllergens, eq(productAllergens.idAllergen, typesOfAllergens.id))
+        .where(inArray(productAllergens.idProduct, orderProductIds));
+
+      allergens = Array.from(new Set(allAllergens.map(a => a.name)));
+    }
+
     const [est] = await db
-      .select({ name: establishments.name })
+      .select({
+        name: establishments.name,
+        address: establishments.address,
+        logo: establishments.logo,
+        banner: establishments.banner,
+      })
       .from(establishments)
       .where(eq(establishments.id, details[0]?.menuItem.establishmentId));
 
@@ -142,6 +192,11 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
       ...order,
       details: detailsWithNames,
       establishmentName: est?.name || 'Unknown Establishment',
+      establishmentAddress: est?.address,
+      establishmentLogo: est?.logo,
+      establishmentBanner: est?.banner,
+      allergens,
+      totalOrderWeight,
     });
   }
 
@@ -175,29 +230,85 @@ export const getEstablishmentOrders = async (
       .innerJoin(menu, eq(menuPrices.menuItemId, menu.id))
       .where(eq(ordersDetails.orderId, order.id));
 
+    const orderProductIds: string[] = [];
+    let totalOrderWeight = 0;
     const detailsWithNames = await Promise.all(
       details.map(async d => {
         let itemName = 'Unknown';
+        let weight: number | null = null;
+        let minWeight: number | null = null;
+        let maxWeight: number | null = null;
+
         if (d.menuItem.itemType === 'Product') {
           const [p] = await db.select().from(products).where(eq(products.id, d.menuItem.itemId));
           itemName = p?.name || 'Unknown Product';
+          weight = p?.weight;
+          if (p?.id) orderProductIds.push(p.id);
+
+          if (weight) {
+            totalOrderWeight += weight * d.detail.quantity;
+          }
         } else {
           const [b] = await db.select().from(boxes).where(eq(boxes.id, d.menuItem.itemId));
           itemName = b?.name || 'Unknown Box';
+          minWeight = b?.minWeight;
+          maxWeight = b?.maxWeight;
+
+          if (b?.id) {
+            const productsInBox = await db
+              .select({ productId: boxItems.productId })
+              .from(boxItems)
+              .where(eq(boxItems.boxId, b.id));
+            orderProductIds.push(...productsInBox.map(p => p.productId));
+          }
+
+          if (minWeight !== null && maxWeight !== null) {
+            const averageWeight = (minWeight + maxWeight) / 2;
+            totalOrderWeight += averageWeight * d.detail.quantity;
+          }
         }
 
         return {
           ...d.detail,
           itemName,
           itemType: d.menuItem.itemType,
-          price: d.detail.price,
+          weight,
+          minWeight,
+          maxWeight,
         };
       })
     );
 
+    let allergens: string[] = [];
+    if (orderProductIds.length > 0) {
+      const allAllergens = await db
+        .select({ name: typesOfAllergens.name })
+        .from(productAllergens)
+        .innerJoin(typesOfAllergens, eq(productAllergens.idAllergen, typesOfAllergens.id))
+        .where(inArray(productAllergens.idProduct, Array.from(new Set(orderProductIds))));
+
+      allergens = Array.from(new Set(allAllergens.map(a => a.name)));
+    }
+
+    const [est] = await db
+      .select({
+        name: establishments.name,
+        address: establishments.address,
+        logo: establishments.logo,
+        banner: establishments.banner,
+      })
+      .from(establishments)
+      .where(eq(establishments.id, details[0]?.menuItem.establishmentId));
+
     results.push({
       ...order,
       details: detailsWithNames,
+      establishmentName: est?.name || 'Unknown Establishment',
+      establishmentAddress: est?.address,
+      establishmentLogo: est?.logo,
+      establishmentBanner: est?.banner,
+      allergens,
+      totalOrderWeight,
     });
   }
 
@@ -264,28 +375,73 @@ export const getOrderById = async (
     throw new Error('Unauthorized');
   }
 
+  const orderProductIds: string[] = [];
+  let totalOrderWeight = 0;
   const detailsWithNames = await Promise.all(
     details.map(async d => {
       let itemName = 'Unknown';
+      let weight: number | null = null;
+      let minWeight: number | null = null;
+      let maxWeight: number | null = null;
+
       if (d.menuItem.itemType === 'Product') {
         const [p] = await db.select().from(products).where(eq(products.id, d.menuItem.itemId));
         itemName = p?.name || 'Unknown Product';
+        weight = p?.weight;
+        if (p?.id) orderProductIds.push(p.id);
+
+        if (weight) {
+          totalOrderWeight += weight * d.detail.quantity;
+        }
       } else {
         const [b] = await db.select().from(boxes).where(eq(boxes.id, d.menuItem.itemId));
         itemName = b?.name || 'Unknown Box';
+        minWeight = b?.minWeight;
+        maxWeight = b?.maxWeight;
+
+        if (b?.id) {
+          const productsInBox = await db
+            .select({ productId: boxItems.productId })
+            .from(boxItems)
+            .where(eq(boxItems.boxId, b.id));
+          orderProductIds.push(...productsInBox.map(p => p.productId));
+        }
+
+        if (minWeight !== null && maxWeight !== null) {
+          const averageWeight = (minWeight + maxWeight) / 2;
+          totalOrderWeight += averageWeight * d.detail.quantity;
+        }
       }
 
       return {
         ...d.detail,
         itemName,
         itemType: d.menuItem.itemType,
-        price: d.detail.price,
+        weight,
+        minWeight,
+        maxWeight,
       };
     })
   );
 
+  let allergens: string[] = [];
+  if (orderProductIds.length > 0) {
+    const allAllergens = await db
+      .select({ name: typesOfAllergens.name })
+      .from(productAllergens)
+      .innerJoin(typesOfAllergens, eq(productAllergens.idAllergen, typesOfAllergens.id))
+      .where(inArray(productAllergens.idProduct, Array.from(new Set(orderProductIds))));
+
+    allergens = Array.from(new Set(allAllergens.map(a => a.name)));
+  }
+
   const [est] = await db
-    .select({ name: establishments.name })
+    .select({
+      name: establishments.name,
+      address: establishments.address,
+      logo: establishments.logo,
+      banner: establishments.banner,
+    })
     .from(establishments)
     .where(eq(establishments.id, details[0]?.menuItem.establishmentId));
 
@@ -293,5 +449,10 @@ export const getOrderById = async (
     ...order,
     details: detailsWithNames,
     establishmentName: est?.name || 'Unknown Establishment',
+    establishmentAddress: est?.address,
+    establishmentLogo: est?.logo,
+    establishmentBanner: est?.banner,
+    allergens,
+    totalOrderWeight,
   };
 };

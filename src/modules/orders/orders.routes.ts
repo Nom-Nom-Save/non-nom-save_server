@@ -15,15 +15,20 @@ const router = Router();
  *         orderId: { type: string, format: uuid }
  *         menuPriceId: { type: string, format: uuid }
  *         quantity: { type: integer }
- *         price: { type: integer }
+ *         price: { type: number }
+ *         originalPrice: { type: number }
+ *         discountPrice: { type: number, nullable: true }
  *         itemName: { type: string }
  *         itemType: { type: string }
+ *         weight: { type: number, nullable: true }
+ *         minWeight: { type: number, nullable: true }
+ *         maxWeight: { type: number, nullable: true }
  *     Order:
  *       type: object
  *       properties:
  *         id: { type: string, format: uuid }
  *         userId: { type: string, format: uuid }
- *         totalPrice: { type: integer }
+ *         totalPrice: { type: number }
  *         orderStatus: { type: string, enum: [Reserved, Completed, Cancelled, Expired] }
  *         qrCodeData: { type: string }
  *         reservedAt: { type: string, format: date-time }
@@ -38,7 +43,16 @@ const router = Router();
  *               type: array
  *               items: { $ref: '#/components/schemas/OrderDetail' }
  *             establishmentName: { type: string }
+ *             establishmentAddress: { type: string, nullable: true }
+ *             establishmentLogo: { type: string, nullable: true }
+ *             establishmentBanner: { type: string, nullable: true }
+ *             allergens: { type: array, items: { type: string } }
+ *             totalOrderWeight: { type: number }
  *
+ */
+
+/**
+ * @swagger
  * /orders:
  *   post:
  *     summary: Create a new order
