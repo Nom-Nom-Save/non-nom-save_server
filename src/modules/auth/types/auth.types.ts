@@ -34,3 +34,8 @@ export enum UserType {
   USER = 'user',
   ESTABLISHMENT = 'establishment',
 }
+
+export interface GoogleLoginDto {
+  idToken: string;
+  loginType?: LoginType;
+}

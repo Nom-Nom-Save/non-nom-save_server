@@ -7,8 +7,10 @@ import {
   RegisterUserResponse,
   UserType,
 } from './types/auth.types';
+import { OAuth2Client } from 'google-auth-library';
 import { db } from '../../database';
 import { users } from '../../database/schema/users.schema';
+import { googleOauthCredentials } from '../../database/schema/google_oauth_credentials.schema';
 import { eq, and, gt, gte } from 'drizzle-orm';
 import { verificationCode } from '../../database/schema/verification_code.schema';
 import {
@@ -264,6 +266,238 @@ export const login = async ({ email, password, loginType }: LoginDto) => {
 
     return { accessToken, refreshToken };
   }
+};
+
+export const loginWithGoogle = async (idToken: string, loginType: LoginType = LoginType.USER) => {
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+  const ticket = await client.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+  const payload = ticket.getPayload();
+
+  const googleIdRaw = payload?.sub;
+  const email = payload?.email?.toLowerCase();
+  const name = payload?.name ?? '';
+  const emailVerified = payload?.email_verified ?? false;
+
+  if (!email) {
+    throw new AppError('Google token does not contain email', 400);
+  }
+
+  if (!emailVerified) {
+    throw new AppError('Email not verified by Google', 400);
+  }
+
+  if (!googleIdRaw) {
+    throw new AppError('Google token does not contain subject (sub)', 400);
+  }
+
+  const googleId = String(googleIdRaw);
+
+  const [cred] = await db
+    .select()
+    .from(googleOauthCredentials)
+    .where(eq(googleOauthCredentials.googleId, googleId));
+
+  if (cred) {
+    const linkedUserId = cred.userId;
+    const linkedEstablishmentId = cred.establishmentId;
+
+    if (linkedUserId) {
+      const [user] = await db.select().from(users).where(eq(users.id, linkedUserId));
+      if (!user) throw new AppError('Linked account not found', 404);
+
+      if (!user.isEmailVerified) {
+        await db.update(users).set({ isEmailVerified: true }).where(eq(users.id, user.id));
+      }
+
+      if (loginType === LoginType.ESTABLISHMENT) {
+        throw new AppError('Account already exists with a different type', 409);
+      }
+
+      const accessToken = generateAccessToken(user.id, user.email);
+      const refreshToken = generateRefreshToken(user.id);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName ?? '',
+          type: UserType.USER,
+        },
+        isNewUser: false,
+      };
+    }
+
+    if (linkedEstablishmentId) {
+      const [est] = await db
+        .select()
+        .from(establishments)
+        .where(eq(establishments.id, linkedEstablishmentId));
+      if (!est) throw new AppError('Linked account not found', 404);
+
+      if (!est.isEmailVerified) {
+        await db
+          .update(establishments)
+          .set({ isEmailVerified: true })
+          .where(eq(establishments.id, est.id));
+      }
+
+      if (loginType === LoginType.USER) {
+        throw new AppError('Account already exists with a different type', 409);
+      }
+
+      const accessToken = generateAccessToken(est.id, est.email);
+      const refreshToken = generateRefreshToken(est.id);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: est.id,
+          email: est.email,
+          fullName: est.name ?? '',
+          type: UserType.ESTABLISHMENT,
+        },
+        isNewUser: false,
+      };
+    }
+  }
+
+  const found = await findByEmail(email);
+
+  if (found) {
+    if (found.type === UserType.USER && loginType === LoginType.ESTABLISHMENT) {
+      throw new AppError('Account already exists with a different type', 409);
+    }
+    if (found.type === UserType.ESTABLISHMENT && loginType === LoginType.USER) {
+      throw new AppError('Account already exists with a different type', 409);
+    }
+
+    if (!found.entity.isEmailVerified) {
+      if (found.type === UserType.USER) {
+        await db.update(users).set({ isEmailVerified: true }).where(eq(users.id, found.entity.id));
+      } else {
+        await db
+          .update(establishments)
+          .set({ isEmailVerified: true })
+          .where(eq(establishments.id, found.entity.id));
+      }
+    }
+
+    type CredInsert = {
+      googleId: string;
+      accessToken: string;
+      refreshToken: string | null;
+      userId?: string;
+      establishmentId?: string;
+    };
+
+    const toInsert: CredInsert = {
+      googleId,
+      accessToken: idToken.substring(0, 255),
+      refreshToken: null,
+    };
+
+    if (found.type === UserType.USER) toInsert.userId = found.entity.id;
+    else toInsert.establishmentId = found.entity.id;
+
+    await db
+      .insert(googleOauthCredentials)
+      .values(toInsert)
+      .onConflictDoUpdate({
+        target: googleOauthCredentials.googleId,
+        set: { accessToken: toInsert.accessToken, createdAt: new Date() },
+      });
+
+    const id = found.entity.id;
+    const accessTokenJwt = generateAccessToken(id, found.entity.email);
+    const refreshTokenJwt = generateRefreshToken(id);
+
+    const isUserEntity = (e: unknown): e is { fullName?: string } => {
+      return typeof e === 'object' && e !== null && 'fullName' in e;
+    };
+
+    const isEstEntity = (e: unknown): e is { name?: string } => {
+      return typeof e === 'object' && e !== null && 'name' in e;
+    };
+
+    let fullNameStr = '';
+    if (isUserEntity(found.entity)) {
+      fullNameStr = found.entity.fullName ?? '';
+    } else if (isEstEntity(found.entity)) {
+      fullNameStr = found.entity.name ?? '';
+    }
+
+    const userPayload = {
+      id,
+      email: found.entity.email,
+      fullName: fullNameStr,
+      type: found.type,
+    } as { id: string; email: string; fullName: string; type: UserType };
+
+    return {
+      accessToken: accessTokenJwt,
+      refreshToken: refreshTokenJwt,
+      user: userPayload,
+      isNewUser: false,
+    };
+  }
+
+  if (!loginType) {
+    throw new AppError('Account not found', 404);
+  }
+
+  const result = await db.transaction(async tx => {
+    if (loginType === LoginType.USER) {
+      const [newUser] = await tx
+        .insert(users)
+        .values({ email, fullName: name || email.split('@')[0], isEmailVerified: true })
+        .returning();
+
+      await tx.insert(googleOauthCredentials).values({
+        userId: newUser.id,
+        googleId,
+        accessToken: idToken.substring(0, 255),
+        refreshToken: null,
+      });
+
+      const accessToken = generateAccessToken(newUser.id, email);
+      const refreshToken = generateRefreshToken(newUser.id);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: { id: newUser.id, email, fullName: newUser.fullName ?? '', type: UserType.USER },
+        isNewUser: true,
+      };
+    }
+
+    const [newEst] = await tx
+      .insert(establishments)
+      .values({ email, name: name || email.split('@')[0], isEmailVerified: true })
+      .returning();
+
+    await tx.insert(googleOauthCredentials).values({
+      establishmentId: newEst.id,
+      googleId,
+      accessToken: idToken.substring(0, 255),
+      refreshToken: null,
+    });
+
+    const accessToken = generateAccessToken(newEst.id, email);
+    const refreshToken = generateRefreshToken(newEst.id);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: newEst.id, email, fullName: newEst.name ?? '', type: UserType.ESTABLISHMENT },
+      isNewUser: true,
+    };
+  });
+
+  return result;
 };
 
 export const refreshToken = async (refreshToken: string) => {
