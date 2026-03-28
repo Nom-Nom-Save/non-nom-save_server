@@ -6,6 +6,39 @@ const router = Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     OrderDetail:
+ *       type: object
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         orderId: { type: string, format: uuid }
+ *         menuPriceId: { type: string, format: uuid }
+ *         quantity: { type: integer }
+ *         price: { type: integer }
+ *         itemName: { type: string }
+ *         itemType: { type: string }
+ *     Order:
+ *       type: object
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         userId: { type: string, format: uuid }
+ *         totalPrice: { type: integer }
+ *         orderStatus: { type: string, enum: [Reserved, Completed, Cancelled, Expired] }
+ *         qrCodeData: { type: string }
+ *         reservedAt: { type: string, format: date-time }
+ *         expiresAt: { type: string, format: date-time, nullable: true }
+ *         completedAt: { type: string, format: date-time, nullable: true }
+ *     OrderWithDetails:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Order'
+ *         - type: object
+ *           properties:
+ *             details:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/OrderDetail' }
+ *             establishmentName: { type: string }
+ *
  * /orders:
  *   post:
  *     summary: Create a new order
@@ -29,17 +62,39 @@ const router = Router();
  *                     menuPriceId: { type: string, format: uuid }
  *                     quantity: { type: integer, minimum: 1 }
  *     responses:
- *       201: { description: Order created successfully }
- *       400: { description: Bad request }
- *       403: { description: Only users can create orders }
+ *       201:
+ *         description: Order created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 order: { $ref: '#/components/schemas/Order' }
+ *       400:
+ *         description: Bad request (e.g. not enough quantity, items from different establishments)
+ *       403:
+ *         description: Only users can create orders
  *   get:
  *     summary: Get orders for the authenticated user or establishment
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200: { description: Success }
- *       401: { description: Unauthorized }
+ *       200:
+ *         description: List of orders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 orders:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/OrderWithDetails' }
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
 router.post('/', userAuth, ordersController.createOrder);
 router.get('/', auth, ordersController.getMyOrders);
@@ -58,9 +113,20 @@ router.get('/', auth, ordersController.getMyOrders);
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
- *       200: { description: Success }
- *       403: { description: Forbidden }
- *       404: { description: Order not found }
+ *       200:
+ *         description: Order retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 order: { $ref: '#/components/schemas/OrderWithDetails' }
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (trying to access someone else's order)
+ *       404:
+ *         description: Order not found
  */
 router.get('/:id', auth, ordersController.getOrder);
 
@@ -87,9 +153,19 @@ router.get('/:id', auth, ordersController.getOrder);
  *             properties:
  *               status: { type: string, enum: [Reserved, Completed, Cancelled, Expired] }
  *     responses:
- *       200: { description: Order status updated }
- *       400: { description: Bad request }
- *       403: { description: "Forbidden: Access only for establishments" }
+ *       200:
+ *         description: Order status updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 order: { $ref: '#/components/schemas/Order' }
+ *       400:
+ *         description: Bad request
+ *       403:
+ *         description: Forbidden (Access only for establishments or wrong establishment)
  */
 router.patch('/:id/status', establishmentAuth, ordersController.updateStatus);
 
