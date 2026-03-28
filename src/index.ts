@@ -40,7 +40,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/boxes', boxesRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', ordersRoutes);
-app.use('api/metadata', metadataRoutes);
+app.use('/api/metadata', metadataRoutes);
 app.use('/api/osm', osmRoutes);
 
 const PORT = parseInt(process.env.PORT || '10000', 10);
