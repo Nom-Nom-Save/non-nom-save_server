@@ -135,6 +135,7 @@ const fetchItemDetails = async (itemId: string, itemType: string) => {
   return {
     name: details.name,
     description: details.description,
+    picture: details.picture,
     weightInfo,
     types,
     allergens: allergens.length > 0 ? allergens : undefined,

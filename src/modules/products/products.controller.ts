@@ -5,7 +5,7 @@ import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 export const createProduct: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;
-    const { name, weight, description, recommendedPrice, typeIds, allergenIds } = req.body;
+    const { name, picture, weight, description, recommendedPrice, typeIds, allergenIds } = req.body;
 
     if (!name) {
       res.status(400).json({ message: 'Product name is required' });
@@ -14,6 +14,7 @@ export const createProduct: ExpressHandler = async (req, res) => {
 
     const product = await productService.createProduct({
       name,
+      picture,
       weight,
       description,
       recommendedPrice,
@@ -48,7 +49,7 @@ export const updateProduct: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;
     const { id } = req.params;
-    const { name, weight, description, recommendedPrice, typeIds, allergenIds } = req.body;
+    const { name, picture, weight, description, recommendedPrice, typeIds, allergenIds } = req.body;
 
     const existingProduct = await productService.getProductById(id!);
 
@@ -65,6 +66,7 @@ export const updateProduct: ExpressHandler = async (req, res) => {
 
     const updated = await productService.updateProduct(id!, {
       name,
+      picture,
       weight,
       description,
       recommendedPrice,
