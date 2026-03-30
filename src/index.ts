@@ -49,41 +49,41 @@ const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
   console.log(`Server running on port ${PORT}`);
-  const runInitialUpdates = async () => {
-    try {
-      const deactivated = await updateExpiredMenuItems();
-      if (deactivated > 0)
-        console.log(`Initially updated ${deactivated} expired menu items to Inactive`);
+  // const runInitialUpdates = async () => {
+  //   try {
+  //     const deactivated = await updateExpiredMenuItems();
+  //     if (deactivated > 0)
+  //       console.log(`Initially updated ${deactivated} expired menu items to Inactive`);
 
-      const activated = await updateScheduledMenuItems();
-      if (activated > 0)
-        console.log(`Initially activated ${activated} scheduled menu items to Active`);
+  //     const activated = await updateScheduledMenuItems();
+  //     if (activated > 0)
+  //       console.log(`Initially activated ${activated} scheduled menu items to Active`);
 
-      const expired = await updateExpiredOrders();
-      if (expired > 0) console.log(`Initially updated ${expired} expired orders to Expired`);
-    } catch (err) {
-      console.error('Error in initial menu items update:', err);
-    }
-  };
+  //     const expired = await updateExpiredOrders();
+  //     if (expired > 0) console.log(`Initially updated ${expired} expired orders to Expired`);
+  //   } catch (err) {
+  //     console.error('Error in initial menu items update:', err);
+  //   }
+  // };
 
-  void runInitialUpdates();
+  // void runInitialUpdates();
 
-  setInterval(() => {
-    void (async () => {
-      try {
-        const deactivated = await updateExpiredMenuItems();
-        if (deactivated > 0)
-          console.log(`Automatically updated ${deactivated} expired menu items to Inactive`);
+  // setInterval(() => {
+  //   void (async () => {
+  //     try {
+  //       const deactivated = await updateExpiredMenuItems();
+  //       if (deactivated > 0)
+  //         console.log(`Automatically updated ${deactivated} expired menu items to Inactive`);
 
-        const activated = await updateScheduledMenuItems();
-        if (activated > 0)
-          console.log(`Automatically activated ${activated} scheduled menu items to Active`);
+  //       const activated = await updateScheduledMenuItems();
+  //       if (activated > 0)
+  //         console.log(`Automatically activated ${activated} scheduled menu items to Active`);
 
-        const expired = await updateExpiredOrders();
-        if (expired > 0) console.log(`Automatically updated ${expired} expired orders to Expired`);
-      } catch (error) {
-        console.error('Error updating menu items or orders:', error);
-      }
-    })();
-  }, 60000);
+  //       const expired = await updateExpiredOrders();
+  //       if (expired > 0) console.log(`Automatically updated ${expired} expired orders to Expired`);
+  //     } catch (error) {
+  //       console.error('Error updating menu items or orders:', error);
+  //     }
+  //   })();
+  // }, 60000);
 });
