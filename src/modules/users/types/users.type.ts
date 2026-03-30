@@ -5,6 +5,7 @@ import { InferSelectModel } from 'drizzle-orm';
 export type User = Omit<InferSelectModel<typeof users>, 'password'> & {
   successfulOrdersCount?: number;
   totalSavings?: number;
+  totalOrderedItems?: number;
 };
 export type Favorite = InferSelectModel<typeof favoriteEstablishments>;
 

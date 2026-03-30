@@ -16,6 +16,7 @@ export const getUserStats = async (userId: string) => {
   const successfulOrdersCount = completedOrders.length;
 
   let totalSavings = 0;
+  let totalOrderedItems = 0;
   if (successfulOrdersCount > 0) {
     const orderIds = completedOrders.map(o => o.id);
     const details = await db
@@ -25,10 +26,11 @@ export const getUserStats = async (userId: string) => {
 
     for (const detail of details) {
       totalSavings += (detail.originalPrice - detail.price) * detail.quantity;
+      totalOrderedItems += detail.quantity;
     }
   }
 
-  return { successfulOrdersCount, totalSavings };
+  return { successfulOrdersCount, totalSavings, totalOrderedItems };
 };
 
 export const getUserById = async (userId: string): Promise<User | null> => {

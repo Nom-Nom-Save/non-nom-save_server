@@ -42,6 +42,7 @@ const router = Router();
  *         createdAt: { type: string, format: date-time }
  *         successfulOrdersCount: { type: integer }
  *         totalSavings: { type: number }
+ *         totalOrderedItems: { type: integer }
  *     Favorite:
  *       type: object
  *       properties:

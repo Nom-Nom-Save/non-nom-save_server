@@ -344,6 +344,111 @@ export const updateOrderStatus = async (
   return updatedOrder;
 };
 
+export const cancelOrder = async (orderId: string, userId: string) => {
+  return await db.transaction(async tx => {
+    const [order] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.userId, userId)));
+
+    if (!order) {
+      throw new Error('Order not found or unauthorized');
+    }
+
+    if (order.orderStatus === 'Completed') {
+      throw new Error('Cannot cancel a completed order');
+    }
+
+    if (order.orderStatus === 'Cancelled') {
+      throw new Error('Order is already cancelled');
+    }
+
+    if (order.orderStatus === 'Expired') {
+      throw new Error('Cannot cancel an expired order');
+    }
+
+    const [updatedOrder] = await tx
+      .update(orders)
+      .set({
+        orderStatus: 'Cancelled',
+        expiresAt: null,
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+
+    // Return items to stock
+    const details = await tx.select().from(ordersDetails).where(eq(ordersDetails.orderId, orderId));
+
+    for (const detail of details) {
+      const [updatedPrice] = await tx
+        .update(menuPrices)
+        .set({
+          availableQuantity: sql`${menuPrices.availableQuantity} + ${detail.quantity}`,
+        })
+        .where(eq(menuPrices.id, detail.menuPriceId))
+        .returning();
+
+      if (updatedPrice.availableQuantity > 0) {
+        await tx.update(menu).set({ status: 'Active' }).where(eq(menu.id, updatedPrice.menuItemId));
+      }
+    }
+
+    return updatedOrder;
+  });
+};
+
+export const updateExpiredOrders = async () => {
+  const now = new Date();
+  const expiredOrders = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.orderStatus, 'Reserved'), sql`${orders.expiresAt} < ${now}`));
+
+  for (const order of expiredOrders) {
+    await db.transaction(async tx => {
+      // Re-verify status inside transaction
+      const [currentOrder] = await tx
+        .select()
+        .from(orders)
+        .where(and(eq(orders.id, order.id), eq(orders.orderStatus, 'Reserved')));
+
+      if (!currentOrder) return;
+
+      await tx
+        .update(orders)
+        .set({
+          orderStatus: 'Expired',
+          expiresAt: null,
+        })
+        .where(eq(orders.id, order.id));
+
+      const details = await tx
+        .select()
+        .from(ordersDetails)
+        .where(eq(ordersDetails.orderId, order.id));
+
+      for (const detail of details) {
+        const [updatedPrice] = await tx
+          .update(menuPrices)
+          .set({
+            availableQuantity: sql`${menuPrices.availableQuantity} + ${detail.quantity}`,
+          })
+          .where(eq(menuPrices.id, detail.menuPriceId))
+          .returning();
+
+        if (updatedPrice.availableQuantity > 0) {
+          await tx
+            .update(menu)
+            .set({ status: 'Active' })
+            .where(eq(menu.id, updatedPrice.menuItemId));
+        }
+      }
+    });
+  }
+
+  return expiredOrders.length;
+};
+
 export const getOrderById = async (
   orderId: string,
   userOrEstablishmentId: string,

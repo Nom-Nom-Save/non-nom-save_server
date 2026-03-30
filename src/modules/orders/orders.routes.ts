@@ -183,4 +183,34 @@ router.get('/:id', auth, ordersController.getOrder);
  */
 router.patch('/:id/status', establishmentAuth, ordersController.updateStatus);
 
+/**
+ * @swagger
+ * /orders/{id}/cancel:
+ *   patch:
+ *     summary: Cancel order (User only)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Order cancelled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 order: { $ref: '#/components/schemas/Order' }
+ *       400:
+ *         description: Bad request (e.g. order already completed or not found)
+ *       403:
+ *         description: Only users can cancel their orders
+ */
+router.patch('/:id/cancel', userAuth, ordersController.cancelOrder);
+
 export default router;
