@@ -264,7 +264,7 @@ export const updateExpiredMenuItems = async (): Promise<number> => {
     .select({ id: menu.id })
     .from(menu)
     .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId))
-    .where(and(eq(menu.status, 'Active'), lt(menuPrices.endTime, sql`now()`)));
+    .where(and(eq(menu.status, 'Active'), lt(menuPrices.endTime, sql`timezone('utc', now())`)));
 
   if (expiredItems.length === 0) return 0;
 
@@ -287,8 +287,8 @@ export const updateScheduledMenuItems = async (): Promise<number> => {
     .where(
       and(
         eq(menu.status, 'Inactive'),
-        lte(menuPrices.startTime, sql`now()`),
-        or(gt(menuPrices.endTime, sql`now()`), isNull(menuPrices.endTime))
+        lte(menuPrices.startTime, sql`timezone('utc', now())`),
+        or(gt(menuPrices.endTime, sql`timezone('utc', now())`), isNull(menuPrices.endTime))
       )
     );
 

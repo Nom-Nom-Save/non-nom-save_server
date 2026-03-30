@@ -55,8 +55,8 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
         userId,
         totalPrice,
         orderStatus: 'Reserved',
-        reservedAt: sql`now()`,
-        expiresAt: sql`now() + interval '2 hours'`,
+        reservedAt: sql`timezone('utc', now())`,
+        expiresAt: sql`timezone('utc', now()) + interval '2 hours'`,
         qrCodeData: `ORDER-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
       })
       .returning();
@@ -408,7 +408,9 @@ export const updateExpiredOrders = async () => {
   const expiredOrders = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.orderStatus, 'Reserved'), lt(orders.expiresAt, sql`now()`)));
+    .where(
+      and(eq(orders.orderStatus, 'Reserved'), lt(orders.expiresAt, sql`timezone('utc', now())`))
+    );
 
   for (const order of expiredOrders) {
     await db.transaction(async tx => {
