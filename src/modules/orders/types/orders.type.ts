@@ -18,6 +18,7 @@ export type OrderWithDetails = Order & {
   details: (OrderDetail & {
     itemName: string;
     itemType: string;
+    itemPicture: string | null;
     price: number;
     originalPrice: number;
     discountPrice: number | null;

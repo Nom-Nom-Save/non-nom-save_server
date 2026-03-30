@@ -123,6 +123,7 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
     const detailsWithNames = await Promise.all(
       details.map(async d => {
         let itemName = 'Unknown';
+        let itemPicture: string | null = null;
         let weight: number | null = null;
         let minWeight: number | null = null;
         let maxWeight: number | null = null;
@@ -130,6 +131,7 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
         if (d.menuItem.itemType === 'Product') {
           const [p] = await db.select().from(products).where(eq(products.id, d.menuItem.itemId));
           itemName = p?.name || 'Unknown Product';
+          itemPicture = p?.picture || null;
           weight = p?.weight;
           if (p?.id) orderProductIds.push(p.id);
 
@@ -139,6 +141,7 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
         } else {
           const [b] = await db.select().from(boxes).where(eq(boxes.id, d.menuItem.itemId));
           itemName = b?.name || 'Unknown Box';
+          itemPicture = b?.picture || null;
           minWeight = b?.minWeight;
           maxWeight = b?.maxWeight;
 
@@ -160,6 +163,7 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
           ...d.detail,
           itemName,
           itemType: d.menuItem.itemType,
+          itemPicture,
           weight,
           minWeight,
           maxWeight,
@@ -235,6 +239,7 @@ export const getEstablishmentOrders = async (
     const detailsWithNames = await Promise.all(
       details.map(async d => {
         let itemName = 'Unknown';
+        let itemPicture: string | null = null;
         let weight: number | null = null;
         let minWeight: number | null = null;
         let maxWeight: number | null = null;
@@ -242,6 +247,7 @@ export const getEstablishmentOrders = async (
         if (d.menuItem.itemType === 'Product') {
           const [p] = await db.select().from(products).where(eq(products.id, d.menuItem.itemId));
           itemName = p?.name || 'Unknown Product';
+          itemPicture = p?.picture || null;
           weight = p?.weight;
           if (p?.id) orderProductIds.push(p.id);
 
@@ -251,6 +257,7 @@ export const getEstablishmentOrders = async (
         } else {
           const [b] = await db.select().from(boxes).where(eq(boxes.id, d.menuItem.itemId));
           itemName = b?.name || 'Unknown Box';
+          itemPicture = b?.picture || null;
           minWeight = b?.minWeight;
           maxWeight = b?.maxWeight;
 
@@ -272,6 +279,7 @@ export const getEstablishmentOrders = async (
           ...d.detail,
           itemName,
           itemType: d.menuItem.itemType,
+          itemPicture,
           weight,
           minWeight,
           maxWeight,
@@ -485,6 +493,7 @@ export const getOrderById = async (
   const detailsWithNames = await Promise.all(
     details.map(async d => {
       let itemName = 'Unknown';
+      let itemPicture: string | null = null;
       let weight: number | null = null;
       let minWeight: number | null = null;
       let maxWeight: number | null = null;
@@ -492,6 +501,7 @@ export const getOrderById = async (
       if (d.menuItem.itemType === 'Product') {
         const [p] = await db.select().from(products).where(eq(products.id, d.menuItem.itemId));
         itemName = p?.name || 'Unknown Product';
+        itemPicture = p?.picture || null;
         weight = p?.weight;
         if (p?.id) orderProductIds.push(p.id);
 
@@ -501,6 +511,7 @@ export const getOrderById = async (
       } else {
         const [b] = await db.select().from(boxes).where(eq(boxes.id, d.menuItem.itemId));
         itemName = b?.name || 'Unknown Box';
+        itemPicture = b?.picture || null;
         minWeight = b?.minWeight;
         maxWeight = b?.maxWeight;
 
@@ -522,13 +533,13 @@ export const getOrderById = async (
         ...d.detail,
         itemName,
         itemType: d.menuItem.itemType,
+        itemPicture,
         weight,
         minWeight,
         maxWeight,
       };
     })
   );
-
   let allergens: string[] = [];
   if (orderProductIds.length > 0) {
     const allAllergens = await db

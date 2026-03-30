@@ -20,6 +20,7 @@ const router = Router();
  *         discountPrice: { type: number, nullable: true }
  *         itemName: { type: string }
  *         itemType: { type: string }
+ *         itemPicture: { type: string, nullable: true }
  *         weight: { type: number, nullable: true }
  *         minWeight: { type: number, nullable: true }
  *         maxWeight: { type: number, nullable: true }
