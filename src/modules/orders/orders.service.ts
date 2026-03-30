@@ -49,15 +49,14 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
       totalPrice += price * item.quantity;
     }
 
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
     const [newOrder] = await tx
       .insert(orders)
       .values({
         userId,
         totalPrice,
         orderStatus: 'Reserved',
-        reservedAt: new Date(),
-        expiresAt,
+        reservedAt: sql`now()`,
+        expiresAt: sql`now() + interval '2 hours'`,
         qrCodeData: `ORDER-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
       })
       .returning();
