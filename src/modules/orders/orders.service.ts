@@ -9,7 +9,7 @@ import { boxes } from '../../database/schema/boxes.schema';
 import { productAllergens } from '../../database/schema/product_allergens.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
 import { boxItems } from '../../database/schema/box_items.schema';
-import { eq, inArray, sql, and } from 'drizzle-orm';
+import { eq, inArray, sql, and, lt } from 'drizzle-orm';
 import { CreateOrderInput, OrderWithDetails } from './types/orders.type';
 
 export const createOrder = async (userId: string, input: CreateOrderInput) => {
@@ -406,11 +406,10 @@ export const cancelOrder = async (orderId: string, userId: string) => {
 };
 
 export const updateExpiredOrders = async () => {
-  const now = new Date();
   const expiredOrders = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.orderStatus, 'Reserved'), sql`${orders.expiresAt} < ${now}`));
+    .where(and(eq(orders.orderStatus, 'Reserved'), lt(orders.expiresAt, sql`now()`)));
 
   for (const order of expiredOrders) {
     await db.transaction(async tx => {

@@ -9,7 +9,7 @@ import { productAllergens } from '../../database/schema/product_allergens.schema
 import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
-import { eq, and, or, inArray, lt, lte, gt, isNull } from 'drizzle-orm';
+import { eq, and, or, inArray, lt, lte, gt, isNull, sql } from 'drizzle-orm';
 import { AddToMenuInput, MenuStatus, MenuWithPrice, UpdateMenuInput } from './types/menu.type';
 
 export const addItemToMenu = async (
@@ -260,13 +260,11 @@ export const updateMenuItem = async (
 };
 
 export const updateExpiredMenuItems = async (): Promise<number> => {
-  const now = new Date();
-
   const expiredItems = await db
     .select({ id: menu.id })
     .from(menu)
     .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId))
-    .where(and(eq(menu.status, 'Active'), lt(menuPrices.endTime, now)));
+    .where(and(eq(menu.status, 'Active'), lt(menuPrices.endTime, sql`now()`)));
 
   if (expiredItems.length === 0) return 0;
 
@@ -282,7 +280,6 @@ export const updateExpiredMenuItems = async (): Promise<number> => {
 };
 
 export const updateScheduledMenuItems = async (): Promise<number> => {
-  const now = new Date();
   const itemsToActivate = await db
     .select({ id: menu.id })
     .from(menu)
@@ -290,8 +287,8 @@ export const updateScheduledMenuItems = async (): Promise<number> => {
     .where(
       and(
         eq(menu.status, 'Inactive'),
-        lte(menuPrices.startTime, now),
-        or(gt(menuPrices.endTime, now), isNull(menuPrices.endTime))
+        lte(menuPrices.startTime, sql`now()`),
+        or(gt(menuPrices.endTime, sql`now()`), isNull(menuPrices.endTime))
       )
     );
 
