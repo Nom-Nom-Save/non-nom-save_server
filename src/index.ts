@@ -13,6 +13,7 @@ import menuRoutes from './modules/menu/menu.routes';
 import ordersRoutes from './modules/orders/orders.routes';
 import metadataRoutes from './modules/metadata/metadata.routes';
 import osmRoutes from './modules/osm/osm.routes';
+import reviewsRoutes from './modules/reviews/reviews.routes';
 import { updateExpiredMenuItems, updateScheduledMenuItems } from './modules/menu/menu.service';
 import { updateExpiredOrders } from './modules/orders/orders.service';
 
@@ -43,6 +44,7 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/osm', osmRoutes);
+app.use('/api/reviews', reviewsRoutes);
 
 const PORT = parseInt(process.env.PORT || '10000', 10);
 const HOST = '0.0.0.0';
