@@ -38,6 +38,7 @@ const router = Router();
  *             properties:
  *               name: { type: string }
  *               picture: { type: string }
+ *               boundTo: { type: string }
  *               weight: { type: number }
  *               description: { type: string }
  *               recommendedPrice: { type: number }
@@ -104,6 +105,7 @@ router.get('/', establishmentAuth, productController.getProducts);
  *             properties:
  *               name: { type: string }
  *               picture: { type: string }
+ *               boundTo: { type: string }
  *               weight: { type: number }
  *               description: { type: string }
  *               recommendedPrice: { type: number }

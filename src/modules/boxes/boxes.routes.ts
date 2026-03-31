@@ -40,6 +40,7 @@ const router = Router();
  *             properties:
  *               name: { type: string }
  *               picture: { type: string }
+ *               boundTo: { type: string }
  *               description: { type: string }
  *               recommendedPrice: { type: number }
  *               quantityOfItems: { type: number }
@@ -106,6 +107,7 @@ router.get('/', establishmentAuth, boxesController.getBoxes);
  *             properties:
  *               name: { type: string }
  *               picture: { type: string }
+ *               boundTo: { type: string }
  *               description: { type: string }
  *               recommendedPrice: { type: number }
  *               quantityOfItems: { type: number }

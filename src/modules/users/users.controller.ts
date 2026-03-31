@@ -113,7 +113,10 @@ export const addToFavorites: ExpressHandler = async (req, res) => {
 
     await addFavorite(user!.id, establishmentId);
 
-    res.status(201).json({ message: 'Establishment added to favorites' });
+    res.status(201).json({
+      message: 'Establishment added to favorites',
+      establishmentId,
+    });
   } catch (error) {
     console.error('Error in addToFavorites:', error);
     res.status(500).json({ error: 'Internal server error' });

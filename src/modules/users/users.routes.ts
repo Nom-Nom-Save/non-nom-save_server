@@ -129,6 +129,7 @@ router.get('/me', userAuth, getMe);
  *               type: object
  *               properties:
  *                 message: { type: string }
+ *                 establishmentId: { type: string, format: uuid }
  *       400:
  *         description: Bad request (e.g. missing establishmentId)
  *       500:

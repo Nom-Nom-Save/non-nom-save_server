@@ -17,4 +17,4 @@ export type CreateBoxInput = {
   productIds?: string[];
 };
 
-export type UpdateBoxInput = Partial<Omit<CreateBoxInput, 'boundTo'>>;
+export type UpdateBoxInput = Partial<CreateBoxInput>;

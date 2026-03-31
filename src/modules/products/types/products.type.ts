@@ -17,4 +17,4 @@ export type CreateProductInput = {
   allergenIds?: string[];
 };
 
-export type UpdateProductInput = Partial<Omit<CreateProductInput, 'boundTo'>>;
+export type UpdateProductInput = Partial<CreateProductInput>;

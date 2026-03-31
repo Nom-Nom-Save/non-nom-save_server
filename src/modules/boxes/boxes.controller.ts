@@ -5,8 +5,16 @@ import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 export const createBox: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;
-    const { name, picture, description, recommendedPrice, quantityOfItems, typeIds, productIds } =
-      req.body;
+    const {
+      name,
+      picture,
+      description,
+      recommendedPrice,
+      quantityOfItems,
+      typeIds,
+      productIds,
+      boundTo,
+    } = req.body;
 
     if (!name || quantityOfItems === undefined) {
       res.status(400).json({ message: 'Name and quantityOfItems are required' });
@@ -19,7 +27,7 @@ export const createBox: ExpressHandler = async (req, res) => {
       description,
       recommendedPrice,
       quantityOfItems,
-      boundTo: establishment.boundTo,
+      boundTo: boundTo || establishment.boundTo,
       typeIds,
       productIds,
     });
@@ -50,8 +58,16 @@ export const updateBox: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;
     const { id } = req.params;
-    const { name, picture, description, recommendedPrice, quantityOfItems, typeIds, productIds } =
-      req.body;
+    const {
+      name,
+      picture,
+      description,
+      recommendedPrice,
+      quantityOfItems,
+      typeIds,
+      productIds,
+      boundTo,
+    } = req.body;
 
     const existingBox = await boxesService.getBoxById(id!);
 
@@ -71,6 +87,7 @@ export const updateBox: ExpressHandler = async (req, res) => {
       description,
       recommendedPrice,
       quantityOfItems,
+      boundTo,
       typeIds,
       productIds,
     });
