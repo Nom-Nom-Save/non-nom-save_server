@@ -21,13 +21,40 @@ export const createOrder: ExpressHandler = async (req, res) => {
 export const getMyOrders: ExpressHandler = async (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
+    const { page, limit } = req.query;
+
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
     if (user?.role === 'user') {
-      const orders = await ordersService.getUserOrders(user.id);
-      res.status(200).json({ orders });
+      const { orders, total } = await ordersService.getUserOrders(user.id, pagination);
+      if (pagination) {
+        res.status(200).json({
+          orders,
+          meta: {
+            total,
+            page: pagination.page,
+            limit: pagination.limit,
+            totalPages: Math.ceil(total / pagination.limit),
+          },
+        });
+      } else {
+        res.status(200).json({ orders });
+      }
     } else if (user?.role === 'establishment') {
-      const orders = await ordersService.getEstablishmentOrders(user.id);
-      res.status(200).json({ orders });
+      const { orders, total } = await ordersService.getEstablishmentOrders(user.id, pagination);
+      if (pagination) {
+        res.status(200).json({
+          orders,
+          meta: {
+            total,
+            page: pagination.page,
+            limit: pagination.limit,
+            totalPages: Math.ceil(total / pagination.limit),
+          },
+        });
+      } else {
+        res.status(200).json({ orders });
+      }
     } else {
       res.status(403).json({ message: 'Unauthorized' });
     }

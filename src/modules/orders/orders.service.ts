@@ -9,8 +9,9 @@ import { boxes } from '../../database/schema/boxes.schema';
 import { productAllergens } from '../../database/schema/product_allergens.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
 import { boxItems } from '../../database/schema/box_items.schema';
-import { eq, inArray, sql, and, lt } from 'drizzle-orm';
+import { eq, inArray, sql, and, lt, count } from 'drizzle-orm';
 import { CreateOrderInput, OrderWithDetails } from './types/orders.type';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const createOrder = async (userId: string, input: CreateOrderInput) => {
   return await db.transaction(async tx => {
@@ -96,12 +97,28 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
   });
 };
 
-export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]> => {
-  const userOrders = await db
+export const getUserOrders = async (
+  userId: string,
+  pagination?: PaginationParams
+): Promise<{ orders: OrderWithDetails[]; total: number }> => {
+  const whereClause = eq(orders.userId, userId);
+
+  const totalCountResult = await db.select({ count: count() }).from(orders).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db
     .select()
     .from(orders)
-    .where(eq(orders.userId, userId))
+    .where(whereClause)
     .orderBy(sql`${orders.reservedAt} DESC`);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const userOrders = await query;
 
   const results: OrderWithDetails[] = [];
 
@@ -203,20 +220,40 @@ export const getUserOrders = async (userId: string): Promise<OrderWithDetails[]>
     });
   }
 
-  return results;
+  return { orders: results, total };
 };
 
 export const getEstablishmentOrders = async (
-  establishmentId: string
-): Promise<OrderWithDetails[]> => {
-  const establishmentOrders = await db
+  establishmentId: string,
+  pagination?: PaginationParams
+): Promise<{ orders: OrderWithDetails[]; total: number }> => {
+  const whereClause = eq(menu.establishmentId, establishmentId);
+
+  const totalCountResult = await db
+    .select({ count: count() })
+    .from(orders)
+    .innerJoin(ordersDetails, eq(orders.id, ordersDetails.orderId))
+    .innerJoin(menuPrices, eq(ordersDetails.menuPriceId, menuPrices.id))
+    .innerJoin(menu, eq(menuPrices.menuItemId, menu.id))
+    .where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db
     .selectDistinct({ order: orders })
     .from(orders)
     .innerJoin(ordersDetails, eq(orders.id, ordersDetails.orderId))
     .innerJoin(menuPrices, eq(ordersDetails.menuPriceId, menuPrices.id))
     .innerJoin(menu, eq(menuPrices.menuItemId, menu.id))
-    .where(eq(menu.establishmentId, establishmentId))
+    .where(whereClause)
     .orderBy(sql`${orders.reservedAt} DESC`);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const establishmentOrders = await query;
 
   const results: OrderWithDetails[] = [];
 
@@ -319,7 +356,7 @@ export const getEstablishmentOrders = async (
     });
   }
 
-  return results;
+  return { orders: results, total };
 };
 
 export const updateOrderStatus = async (

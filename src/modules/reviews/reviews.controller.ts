@@ -5,16 +5,61 @@ import { CreateReviewInput, UpdateReviewInput } from './types/reviews.type';
 import { handleError } from '../../shared/utils/app.error';
 
 export const createReview = async (req: AuthenticatedRequest, res: Response) => {
+  // ... existing ...
+};
+
+export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { establishmentId } = req.params;
+    const { page, limit } = req.query;
+
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+
+    const { reviews, total } = await reviewsService.getEstablishmentReviews(
+      establishmentId as string,
+      pagination
+    );
+
+    if (pagination) {
+      res.status(200).json({
+        reviews,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({ reviews });
+    }
+  } catch (error: unknown) {
+    handleError(res, error);
+  }
+};
+
+export const getMyReviews = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const input: CreateReviewInput = req.body;
+    const { page, limit } = req.query;
 
-    const result = await reviewsService.createReview(userId, input);
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    res.status(201).json({
-      message: 'Review created successfully',
-      ...result,
-    });
+    const { reviews, total } = await reviewsService.getUserReviews(userId, pagination);
+
+    if (pagination) {
+      res.status(200).json({
+        reviews,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({ reviews });
+    }
   } catch (error: unknown) {
     handleError(res, error);
   }

@@ -119,6 +119,12 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
  *         schema:
  *           type: string
  *         description: City name to filter establishments by address
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of establishments retrieved successfully
@@ -133,6 +139,7 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Establishment'
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
 router.get('/', getEstablishments);
 
@@ -156,6 +163,12 @@ router.get('/', getEstablishments);
  *         required: true
  *         schema: { type: number }
  *         description: Radius in kilometers
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of nearby establishments
@@ -168,6 +181,7 @@ router.get('/', getEstablishments);
  *                 establishments:
  *                   type: array
  *                   items: { $ref: '#/components/schemas/Establishment' }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
 router.get('/nearby', getNearbyEstablishments);
 

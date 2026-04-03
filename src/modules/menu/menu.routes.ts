@@ -22,6 +22,12 @@ const router = Router();
  *         name: establishmentId
  *         required: true
  *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: Success
@@ -62,6 +68,7 @@ const router = Router();
  *                           weightInfo: { type: string, nullable: true }
  *                           types: { type: array, items: { type: string } }
  *                           allergens: { type: array, items: { type: string } }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
 router.get('/public/:establishmentId', getPublicMenu);
 
@@ -187,6 +194,13 @@ router.post('/', establishmentAuth, addToMenu);
  *     tags: [Menu]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: Success
@@ -227,6 +241,7 @@ router.post('/', establishmentAuth, addToMenu);
  *                           weightInfo: { type: string, nullable: true }
  *                           types: { type: array, items: { type: string } }
  *                           allergens: { type: array, items: { type: string } }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
 router.post('/', establishmentAuth, addToMenu);
 router.get('/', establishmentAuth, getMenu);

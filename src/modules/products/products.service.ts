@@ -4,8 +4,9 @@ import { productTypes } from '../../database/schema/product_types.schema';
 import { productAllergens } from '../../database/schema/product_allergens.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
-import { eq, or, inArray, InferSelectModel } from 'drizzle-orm';
+import { eq, or, inArray, InferSelectModel, count } from 'drizzle-orm';
 import { Product, CreateProductInput, UpdateProductInput } from './types/products.type';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 type RawProduct = InferSelectModel<typeof products>;
 
@@ -87,20 +88,29 @@ const attachTypesAndAllergens = async (productList: RawProduct[]): Promise<Produ
 
 export const getProducts = async (
   establishmentBoundTo: string,
-  filterType: 'Private' | 'All' = 'All'
-): Promise<Product[]> => {
-  const baseQuery = db.select().from(products);
+  filterType: 'Private' | 'All' = 'All',
+  pagination?: PaginationParams
+): Promise<{ products: Product[]; total: number }> => {
+  const whereClause =
+    filterType === 'Private'
+      ? eq(products.boundTo, establishmentBoundTo)
+      : or(eq(products.boundTo, establishmentBoundTo), eq(products.boundTo, '0'));
 
-  let productList: RawProduct[];
-  if (filterType === 'Private') {
-    productList = await baseQuery.where(eq(products.boundTo, establishmentBoundTo));
-  } else {
-    productList = await baseQuery.where(
-      or(eq(products.boundTo, establishmentBoundTo), eq(products.boundTo, '0'))
-    );
+  const totalCountResult = await db.select({ count: count() }).from(products).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db.select().from(products).where(whereClause);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
   }
 
-  return attachTypesAndAllergens(productList);
+  const productList = await query;
+  const attachedProducts = await attachTypesAndAllergens(productList);
+
+  return { products: attachedProducts, total };
 };
 
 export const getProductById = async (id: string): Promise<Product | null> => {

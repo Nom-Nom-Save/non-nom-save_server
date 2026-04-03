@@ -34,9 +34,28 @@ export const addToMenu: ExpressHandler = async (req, res) => {
 export const getMenu: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;
-    const menu = await menuService.getMenuForEstablishment(establishment.id);
+    const { page, limit } = req.query;
 
-    res.status(200).json({ menu });
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+
+    const { menuItems, total } = await menuService.getMenuForEstablishment(
+      establishment.id,
+      pagination
+    );
+
+    if (pagination) {
+      res.status(200).json({
+        menu: menuItems,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({ menu: menuItems });
+    }
   } catch (error) {
     console.error('Error getting menu:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -46,15 +65,30 @@ export const getMenu: ExpressHandler = async (req, res) => {
 export const getPublicMenu: ExpressHandler = async (req, res) => {
   try {
     const { establishmentId } = req.params;
+    const { page, limit } = req.query;
 
     if (!establishmentId) {
       res.status(400).json({ message: 'Establishment ID is required' });
       return;
     }
 
-    const menu = await menuService.getPublicMenu(establishmentId);
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    res.status(200).json({ menu });
+    const { menuItems, total } = await menuService.getPublicMenu(establishmentId, pagination);
+
+    if (pagination) {
+      res.status(200).json({
+        menu: menuItems,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({ menu: menuItems });
+    }
   } catch (error) {
     console.error('Error getting public menu:', error);
     res.status(500).json({ message: 'Internal server error' });

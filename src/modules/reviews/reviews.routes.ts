@@ -78,6 +78,85 @@ const router = Router();
  *         description: Internal server error
  */
 router.post('/', userAuth, reviewsController.createReview as any);
+/**
+ * @swagger
+ * /reviews/establishment/{establishmentId}:
+ *   get:
+ *     summary: Get reviews for an establishment
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: establishmentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
+ *     responses:
+ *       200:
+ *         description: List of reviews retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reviews:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, format: uuid }
+ *                       rating: { type: integer }
+ *                       comment: { type: string, nullable: true }
+ *                       createdAt: { type: string, format: date-time }
+ *                       user:
+ *                         type: object
+ *                         properties:
+ *                           id: { type: string, format: uuid }
+ *                           fullName: { type: string }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
+ * /reviews/my:
+ *   get:
+ *     summary: Get reviews by current user
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
+ *     responses:
+ *       200:
+ *         description: List of reviews retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reviews:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, format: uuid }
+ *                       rating: { type: integer }
+ *                       comment: { type: string, nullable: true }
+ *                       createdAt: { type: string, format: date-time }
+ *                       establishment:
+ *                         type: object
+ *                         properties:
+ *                           id: { type: string, format: uuid }
+ *                           name: { type: string }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
+ */
+router.get('/establishment/:establishmentId', reviewsController.getEstablishmentReviews as any);
+router.get('/my', userAuth, reviewsController.getMyReviews as any);
 
 /**
  * @swagger

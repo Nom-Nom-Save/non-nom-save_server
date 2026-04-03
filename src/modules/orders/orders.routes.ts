@@ -95,6 +95,13 @@ const router = Router();
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of orders retrieved successfully
@@ -106,6 +113,7 @@ const router = Router();
  *                 orders:
  *                   type: array
  *                   items: { $ref: '#/components/schemas/OrderWithDetails' }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  *       401:
  *         description: Unauthorized
  *       403:

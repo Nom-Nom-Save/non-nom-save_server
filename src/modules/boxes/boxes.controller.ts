@@ -42,12 +42,30 @@ export const createBox: ExpressHandler = async (req, res) => {
 export const getBoxes: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;
-    const { type } = req.query;
+    const { type, page, limit } = req.query;
     const filterType = type === 'Private' ? 'Private' : 'All';
 
-    const boxes = await boxesService.getBoxes(establishment.boundTo, filterType);
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    res.status(200).json({ boxes });
+    const { boxes, total } = await boxesService.getBoxes(
+      establishment.boundTo,
+      filterType,
+      pagination
+    );
+
+    if (pagination) {
+      res.status(200).json({
+        boxes,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({ boxes });
+    }
   } catch (error) {
     console.error('Error getting boxes:', error);
     res.status(500).json({ message: 'Internal server error' });

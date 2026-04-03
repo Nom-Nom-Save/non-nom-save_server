@@ -22,6 +22,13 @@ const router = Router();
  *   get:
  *     summary: Get all product types
  *     tags: [Metadata]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of product types retrieved successfully
@@ -33,6 +40,7 @@ const router = Router();
  *                 productTypes:
  *                   type: array
  *                   items: { $ref: '#/components/schemas/ProductType' }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  *       500:
  *         description: Internal server error
  */
@@ -44,6 +52,13 @@ router.get('/product-types', metadataController.getProductTypes);
  *   get:
  *     summary: Get all types of allergens
  *     tags: [Metadata]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of allergens retrieved successfully
@@ -55,6 +70,7 @@ router.get('/product-types', metadataController.getProductTypes);
  *                 allergens:
  *                   type: array
  *                   items: { $ref: '#/components/schemas/Allergen' }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  *       500:
  *         description: Internal server error
  */

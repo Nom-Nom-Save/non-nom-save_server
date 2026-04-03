@@ -1,4 +1,4 @@
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { eq, and, sql, inArray, count } from 'drizzle-orm';
 import { db } from '../../database';
 import { users } from '../../database/schema/users.schema';
 import { orders } from '../../database/schema/orders.schema';
@@ -6,6 +6,7 @@ import { ordersDetails } from '../../database/schema/orders_details.schema';
 import { favoriteEstablishments } from '../../database/schema/favorite_establishments.schema';
 import { establishments } from '../../database/schema/establishments.schema';
 import { User, UpdateUserInput, FavoriteWithDetails } from './types/users.type';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const getUserStats = async (userId: string) => {
   const completedOrders = await db
@@ -107,8 +108,19 @@ export const removeFavorite = async (userId: string, establishmentId: string) =>
   return result.length > 0;
 };
 
-export const getFavorites = async (userId: string): Promise<FavoriteWithDetails[]> => {
-  const result = await db
+export const getFavorites = async (
+  userId: string,
+  pagination?: PaginationParams
+): Promise<{ favorites: FavoriteWithDetails[]; total: number }> => {
+  const whereClause = eq(favoriteEstablishments.userId, userId);
+
+  const totalCountResult = await db
+    .select({ count: count() })
+    .from(favoriteEstablishments)
+    .where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db
     .select({
       favorite: favoriteEstablishments,
       establishment: {
@@ -121,10 +133,20 @@ export const getFavorites = async (userId: string): Promise<FavoriteWithDetails[
     })
     .from(favoriteEstablishments)
     .innerJoin(establishments, eq(favoriteEstablishments.establishmentId, establishments.id))
-    .where(eq(favoriteEstablishments.userId, userId));
+    .where(whereClause);
 
-  return result.map(r => ({
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const result = await query;
+
+  const favorites = result.map(r => ({
     ...r.favorite,
     establishment: r.establishment,
   }));
+
+  return { favorites, total };
 };

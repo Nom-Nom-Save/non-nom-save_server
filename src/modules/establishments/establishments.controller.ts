@@ -38,19 +38,39 @@ export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
 
 export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
   try {
-    const { lat, lon, radius } = req.query;
+    const { lat, lon, radius, page, limit } = req.query;
 
     if (!lat || !lon || !radius) {
       res.status(400).json({ error: 'lat, lon, and radius are required' });
       return;
     }
 
-    const nearby = await getEstablishmentsByRadius(Number(lat), Number(lon), Number(radius));
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    res.status(200).json({
-      message: 'Nearby establishments retrieved successfully',
-      establishments: nearby,
-    });
+    const { establishments: nearby, total } = await getEstablishmentsByRadius(
+      Number(lat),
+      Number(lon),
+      Number(radius),
+      pagination
+    );
+
+    if (pagination) {
+      res.status(200).json({
+        message: 'Nearby establishments retrieved successfully',
+        establishments: nearby,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({
+        message: 'Nearby establishments retrieved successfully',
+        establishments: nearby,
+      });
+    }
   } catch (error) {
     console.error('Error in getNearbyEstablishments:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -59,19 +79,36 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
 
 export const getEstablishments: ExpressHandler = async (req, res) => {
   try {
-    const { city } = req.query;
-    let establishments;
+    const { city, page, limit } = req.query;
+    let result: { establishments: any[]; total: number };
+
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
     if (city && typeof city === 'string') {
-      establishments = await getEstablishmentsByCity(city);
+      result = await getEstablishmentsByCity(city, pagination);
     } else {
-      establishments = await getAllEstablishments();
+      result = await getAllEstablishments(pagination);
     }
 
-    res.status(200).json({
-      message: 'Establishments retrieved successfully',
-      establishments,
-    });
+    const { establishments, total } = result;
+
+    if (pagination) {
+      res.status(200).json({
+        message: 'Establishments retrieved successfully',
+        establishments,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({
+        message: 'Establishments retrieved successfully',
+        establishments,
+      });
+    }
   } catch (error) {
     console.error('Error in getEstablishments:', error);
     res.status(500).json({ error: 'Internal server error' });

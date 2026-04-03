@@ -9,8 +9,9 @@ import { productAllergens } from '../../database/schema/product_allergens.schema
 import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
-import { eq, and, or, inArray, lt, lte, gt, isNull, sql } from 'drizzle-orm';
+import { eq, and, or, inArray, lt, lte, gt, isNull, sql, count } from 'drizzle-orm';
 import { AddToMenuInput, MenuStatus, MenuWithPrice, UpdateMenuInput } from './types/menu.type';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const addItemToMenu = async (
   establishmentId: string,
@@ -143,13 +144,27 @@ const fetchItemDetails = async (itemId: string, itemType: string) => {
 };
 
 export const getMenuForEstablishment = async (
-  establishmentId: string
-): Promise<MenuWithPrice[]> => {
-  const menuItems = await db
+  establishmentId: string,
+  pagination?: PaginationParams
+): Promise<{ menuItems: MenuWithPrice[]; total: number }> => {
+  const whereClause = eq(menu.establishmentId, establishmentId);
+
+  const totalCountResult = await db.select({ count: count() }).from(menu).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db
     .select()
     .from(menu)
-    .where(eq(menu.establishmentId, establishmentId))
+    .where(whereClause)
     .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId));
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const menuItems = await query;
 
   const result: MenuWithPrice[] = [];
 
@@ -163,15 +178,31 @@ export const getMenuForEstablishment = async (
     });
   }
 
-  return result;
+  return { menuItems: result, total };
 };
 
-export const getPublicMenu = async (establishmentId: string): Promise<MenuWithPrice[]> => {
-  const menuItems = await db
+export const getPublicMenu = async (
+  establishmentId: string,
+  pagination?: PaginationParams
+): Promise<{ menuItems: MenuWithPrice[]; total: number }> => {
+  const whereClause = and(eq(menu.establishmentId, establishmentId), eq(menu.status, 'Active'));
+
+  const totalCountResult = await db.select({ count: count() }).from(menu).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db
     .select()
     .from(menu)
-    .where(and(eq(menu.establishmentId, establishmentId), eq(menu.status, 'Active')))
+    .where(whereClause)
     .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId));
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const menuItems = await query;
 
   const result: MenuWithPrice[] = [];
 
@@ -185,7 +216,7 @@ export const getPublicMenu = async (establishmentId: string): Promise<MenuWithPr
     });
   }
 
-  return result;
+  return { menuItems: result, total };
 };
 
 export const getMenuItemById = async (menuId: string): Promise<MenuWithPrice | null> => {

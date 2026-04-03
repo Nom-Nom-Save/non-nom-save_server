@@ -23,6 +23,13 @@ const router = Router();
  *         createdAt: { type: string, format: date-time }
  *         types: { type: array, items: { type: string } }
  *         products: { type: array, items: { type: string } }
+ *     PaginationMeta:
+ *       type: object
+ *       properties:
+ *         total: { type: integer }
+ *         page: { type: integer }
+ *         limit: { type: integer }
+ *         totalPages: { type: integer }
  *
  * /boxes:
  *   post:
@@ -69,6 +76,12 @@ const router = Router();
  *       - in: query
  *         name: type
  *         schema: { type: string, enum: [Private, All] }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of boxes retrieved successfully
@@ -80,6 +93,7 @@ const router = Router();
  *                 boxes:
  *                   type: array
  *                   items: { $ref: '#/components/schemas/Box' }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  *       500:
  *         description: Internal server error
  */

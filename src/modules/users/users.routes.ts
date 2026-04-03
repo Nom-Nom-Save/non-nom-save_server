@@ -93,6 +93,13 @@ router.get('/me', userAuth, getMe);
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of favorite establishments retrieved successfully
@@ -104,6 +111,7 @@ router.get('/me', userAuth, getMe);
  *                 favorites:
  *                   type: array
  *                   items: { $ref: '#/components/schemas/Favorite' }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  *       500:
  *         description: Internal server error
  *   post:

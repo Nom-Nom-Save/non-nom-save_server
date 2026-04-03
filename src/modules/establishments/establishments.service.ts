@@ -1,4 +1,4 @@
-import { and, eq, like, sql } from 'drizzle-orm';
+import { and, eq, like, sql, count } from 'drizzle-orm';
 import { db } from '../../database';
 import { establishments } from '../../database/schema/establishments.schema';
 import {
@@ -7,6 +7,7 @@ import {
   PublicEstablishment,
 } from './types/establishments.type';
 import NodeGeocoder from 'node-geocoder';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 const publicFields = {
   id: establishments.id,
@@ -22,36 +23,84 @@ const publicFields = {
   createdAt: establishments.createdAt,
 };
 
-export const getAllEstablishments = async (): Promise<PublicEstablishment[]> => {
-  return (await db.select(publicFields).from(establishments)) as PublicEstablishment[];
+export const getAllEstablishments = async (
+  pagination?: PaginationParams
+): Promise<{ establishments: PublicEstablishment[]; total: number }> => {
+  const totalCountResult = await db.select({ count: count() }).from(establishments);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db.select(publicFields).from(establishments);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const results = (await query) as PublicEstablishment[];
+  return { establishments: results, total };
 };
 
-export const getEstablishmentsByCity = async (city: string): Promise<PublicEstablishment[]> => {
-  return (await db
-    .select(publicFields)
+export const getEstablishmentsByCity = async (
+  city: string,
+  pagination?: PaginationParams
+): Promise<{ establishments: PublicEstablishment[]; total: number }> => {
+  const whereClause = and(
+    eq(establishments.isEmailVerified, true),
+    like(establishments.address, `%${city}%`)
+  );
+
+  const totalCountResult = await db
+    .select({ count: count() })
     .from(establishments)
-    .where(
-      and(eq(establishments.isEmailVerified, true), like(establishments.address, `%${city}%`))
-    )) as PublicEstablishment[];
+    .where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db.select(publicFields).from(establishments).where(whereClause);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const results = (await query) as PublicEstablishment[];
+  return { establishments: results, total };
 };
 
 export const getEstablishmentsByRadius = async (
   lat: number,
   lon: number,
-  radiusKm: number
-): Promise<PublicEstablishment[]> => {
+  radiusKm: number,
+  pagination?: PaginationParams
+): Promise<{ establishments: PublicEstablishment[]; total: number }> => {
   const distanceSql = sql`6371 * acos(
     cos(radians(${lat})) * cos(radians(latitude)) * 
     cos(radians(longitude) - radians(${lon})) + 
     sin(radians(${lat})) * sin(radians(latitude))
   )`;
 
-  return (await db
-    .select(publicFields)
+  const whereClause = and(
+    eq(establishments.isEmailVerified, true),
+    sql`${distanceSql} <= ${radiusKm}`
+  );
+
+  const totalCountResult = await db
+    .select({ count: count() })
     .from(establishments)
-    .where(
-      and(eq(establishments.isEmailVerified, true), sql`${distanceSql} <= ${radiusKm}`)
-    )) as PublicEstablishment[];
+    .where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db.select(publicFields).from(establishments).where(whereClause);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const results = (await query) as PublicEstablishment[];
+  return { establishments: results, total };
 };
 
 export const updateEstablishment = async (

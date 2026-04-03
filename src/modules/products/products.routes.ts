@@ -67,6 +67,12 @@ const router = Router();
  *       - in: query
  *         name: type
  *         schema: { type: string, enum: [Private, All] }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, example: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, example: 10 }
  *     responses:
  *       200:
  *         description: List of products retrieved successfully
@@ -78,6 +84,7 @@ const router = Router();
  *                 products:
  *                   type: array
  *                   items: { $ref: '#/components/schemas/Product' }
+ *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  *       500:
  *         description: Internal server error
  */

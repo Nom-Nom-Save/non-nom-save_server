@@ -4,8 +4,9 @@ import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { boxItems } from '../../database/schema/box_items.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { products } from '../../database/schema/products.schema';
-import { eq, or, inArray, InferSelectModel } from 'drizzle-orm';
+import { eq, or, inArray, InferSelectModel, count } from 'drizzle-orm';
 import { Box, CreateBoxInput, UpdateBoxInput } from './types/boxes.type';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 type RawBox = InferSelectModel<typeof boxes>;
 
@@ -117,20 +118,29 @@ const attachTypesAndProducts = async (boxList: RawBox[]): Promise<Box[]> => {
 
 export const getBoxes = async (
   establishmentBoundTo: string,
-  filterType: 'Private' | 'All' = 'All'
-): Promise<Box[]> => {
-  const baseQuery = db.select().from(boxes);
+  filterType: 'Private' | 'All' = 'All',
+  pagination?: PaginationParams
+): Promise<{ boxes: Box[]; total: number }> => {
+  const whereClause =
+    filterType === 'Private'
+      ? eq(boxes.boundTo, establishmentBoundTo)
+      : or(eq(boxes.boundTo, establishmentBoundTo), eq(boxes.boundTo, '0'));
 
-  let boxList: RawBox[];
-  if (filterType === 'Private') {
-    boxList = await baseQuery.where(eq(boxes.boundTo, establishmentBoundTo));
-  } else {
-    boxList = await baseQuery.where(
-      or(eq(boxes.boundTo, establishmentBoundTo), eq(boxes.boundTo, '0'))
-    );
+  const totalCountResult = await db.select({ count: count() }).from(boxes).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db.select().from(boxes).where(whereClause);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
   }
 
-  return attachTypesAndProducts(boxList);
+  const boxList = await query;
+  const attachedBoxes = await attachTypesAndProducts(boxList);
+
+  return { boxes: attachedBoxes, total };
 };
 
 export const getBoxById = async (id: string): Promise<Box | null> => {

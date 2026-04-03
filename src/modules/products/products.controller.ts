@@ -34,12 +34,30 @@ export const createProduct: ExpressHandler = async (req, res) => {
 export const getProducts: ExpressHandler = async (req, res) => {
   try {
     const establishment = (req as AuthenticatedRequest).establishment;
-    const { type } = req.query;
+    const { type, page, limit } = req.query;
     const filterType = type === 'Private' ? 'Private' : 'All';
 
-    const products = await productService.getProducts(establishment.boundTo, filterType);
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    res.status(200).json({ products });
+    const { products, total } = await productService.getProducts(
+      establishment.boundTo,
+      filterType,
+      pagination
+    );
+
+    if (pagination) {
+      res.status(200).json({
+        products,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({ products });
+    }
   } catch (error) {
     console.error('Error getting products:', error);
     res.status(500).json({ message: 'Internal server error' });

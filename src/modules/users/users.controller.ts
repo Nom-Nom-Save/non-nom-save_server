@@ -150,9 +150,25 @@ export const removeFromFavorites: ExpressHandler = async (req, res) => {
 export const getMyFavorites: ExpressHandler = async (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
-    const favorites = await getFavorites(user!.id);
+    const { page, limit } = req.query;
 
-    res.status(200).json({ favorites });
+    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+
+    const { favorites, total } = await getFavorites(user!.id, pagination);
+
+    if (pagination) {
+      res.status(200).json({
+        favorites,
+        meta: {
+          total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      });
+    } else {
+      res.status(200).json({ favorites });
+    }
   } catch (error) {
     console.error('Error in getMyFavorites:', error);
     res.status(500).json({ error: 'Internal server error' });

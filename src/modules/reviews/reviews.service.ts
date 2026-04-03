@@ -1,10 +1,82 @@
-import { and, eq, sql, avg } from 'drizzle-orm';
+import { and, eq, sql, avg, count } from 'drizzle-orm';
 import { db } from '../../database';
 import { reviews } from '../../database/schema/reviews.schema';
 import { establishments } from '../../database/schema/establishments.schema';
+import { users } from '../../database/schema/users.schema';
 import { CreateReviewInput, UpdateReviewInput, Review } from './types/reviews.type';
 import { getEstablishmentById } from '../establishments/establishments.service';
 import { AppError } from '../../shared/utils/app.error';
+import { PaginationParams } from '../../shared/types/pagination.type';
+
+export const getEstablishmentReviews = async (
+  establishmentId: string,
+  pagination?: PaginationParams
+): Promise<{ reviews: any[]; total: number }> => {
+  const whereClause = eq(reviews.establishmentId, establishmentId);
+
+  const totalCountResult = await db.select({ count: count() }).from(reviews).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db
+    .select({
+      id: reviews.id,
+      rating: reviews.rating,
+      comment: reviews.comment,
+      createdAt: reviews.createdAt,
+      user: {
+        id: users.id,
+        fullName: users.fullName,
+      },
+    })
+    .from(reviews)
+    .innerJoin(users, eq(reviews.userId, users.id))
+    .where(whereClause)
+    .orderBy(sql`${reviews.createdAt} DESC`);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const results = await query;
+  return { reviews: results, total };
+};
+
+export const getUserReviews = async (
+  userId: string,
+  pagination?: PaginationParams
+): Promise<{ reviews: any[]; total: number }> => {
+  const whereClause = eq(reviews.userId, userId);
+
+  const totalCountResult = await db.select({ count: count() }).from(reviews).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  let query = db
+    .select({
+      id: reviews.id,
+      rating: reviews.rating,
+      comment: reviews.comment,
+      createdAt: reviews.createdAt,
+      establishment: {
+        id: establishments.id,
+        name: establishments.name,
+      },
+    })
+    .from(reviews)
+    .innerJoin(establishments, eq(reviews.establishmentId, establishments.id))
+    .where(whereClause)
+    .orderBy(sql`${reviews.createdAt} DESC`);
+
+  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
+    const limit = Number(pagination.limit);
+    const offset = (Number(pagination.page) - 1) * limit;
+    query = query.limit(limit).offset(offset) as any;
+  }
+
+  const results = await query;
+  return { reviews: results, total };
+};
 
 export const updateEstablishmentRating = async (establishmentId: string) => {
   const [result] = await db
