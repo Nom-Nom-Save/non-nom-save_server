@@ -7,6 +7,7 @@ import {
   getEstablishmentsByCity,
   getEstablishmentsByRadius,
 } from './establishments.service';
+import { isFavorite } from '../users/users.service';
 import { UpdateEstablishmentInput } from './types/establishments.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 
@@ -158,6 +159,7 @@ export const updateEstablishmentProfile: ExpressHandler = async (req, res) => {
 export const getEstablishment: ExpressHandler = async (req, res) => {
   try {
     const { establishmentId } = req.params;
+    const user = (req as AuthenticatedRequest).user;
 
     if (!establishmentId) {
       res.status(400).json({ error: 'Establishment ID is required' });
@@ -171,9 +173,17 @@ export const getEstablishment: ExpressHandler = async (req, res) => {
       return;
     }
 
+    let favoriteStatus = false;
+    if (user && user.role === 'user') {
+      favoriteStatus = await isFavorite(user.id, establishmentId);
+    }
+
     res.status(200).json({
       message: 'Establishment retrieved successfully',
-      establishment,
+      establishment: {
+        ...establishment,
+        isFavorite: favoriteStatus,
+      },
     });
   } catch (error) {
     console.error('Error in getEstablishment:', error);

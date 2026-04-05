@@ -6,7 +6,7 @@ import {
   getNearbyEstablishments,
   getEstablishmentPrivate,
 } from './establishments.controller';
-import { establishmentAuth } from '../../shared/middleware/auth.middleware';
+import { establishmentAuth, optionalAuth } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
 
@@ -14,67 +14,30 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
- *     UpdateEstablishmentInput:
- *       type: object
- *       properties:
- *         name:
- *           type: string
- *         email:
- *           type: string
- *           format: email
- *         description:
- *           type: string
- *           nullable: true
- *         address:
- *           type: string
- *         latitude:
- *           type: string
- *         longitude:
- *           type: string
- *         workingHours:
- *           type: string
- *           nullable: true
- *         logo:
- *           type: string
- *           nullable: true
- *         banner:
- *           type: string
- *           nullable: true
- *         boundTo:
- *           type: string
- *           nullable: true
  *     Establishment:
  *       type: object
  *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         name:
- *           type: string
- *         description:
- *           type: string
- *           nullable: true
- *         address:
- *           type: string
- *         latitude:
- *           type: string
- *         longitude:
- *           type: string
- *         workingHours:
- *           type: string
- *           nullable: true
- *         logo:
- *           type: string
- *           nullable: true
- *         banner:
- *           type: string
- *           nullable: true
- *         rating:
- *           type: string
- *           nullable: true
- *         createdAt:
- *           type: string
- *           format: date-time
+ *         id: { type: string, format: uuid }
+ *         name: { type: string }
+ *         description: { type: string, nullable: true }
+ *         address: { type: string }
+ *         latitude: { type: string }
+ *         longitude: { type: string }
+ *         workingHours: { type: string, nullable: true }
+ *         logo: { type: string, nullable: true }
+ *         banner: { type: string, nullable: true }
+ *         rating: { type: string, nullable: true }
+ *         createdAt: { type: string, format: date-time }
+ *     EstablishmentDetail:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Establishment'
+ *         - type: object
+ *           properties:
+ *             reviewCount: { type: integer }
+ *             isFavorite: { type: boolean }
+ *             bagsSold: { type: integer }
+ *             foodSaved: { type: string }
+ *     UpdateEstablishmentInput:
  */
 
 /**
@@ -97,7 +60,7 @@ const router = Router();
  *                 message:
  *                   type: string
  *                 establishment:
- *                   $ref: '#/components/schemas/Establishment'
+ *                   $ref: '#/components/schemas/EstablishmentDetail'
  *       401:
  *         description: Unauthorized
  *       404:
@@ -204,11 +167,14 @@ router.get('/nearby', getNearbyEstablishments);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Establishment'
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 establishment: { $ref: '#/components/schemas/Establishment' }
  *       404:
  *         description: Establishment not found
  */
-router.get('/:establishmentId', getEstablishment);
+router.get('/:establishmentId', optionalAuth, getEstablishment);
 
 /**
  * @swagger
@@ -243,7 +209,7 @@ router.get('/:establishmentId', getEstablishment);
  *                 message:
  *                   type: string
  *                 establishment:
- *                   $ref: '#/components/schemas/Establishment'
+ *                   $ref: '#/components/schemas/EstablishmentDetail'
  *       401:
  *         description: Unauthorized
  *       403:

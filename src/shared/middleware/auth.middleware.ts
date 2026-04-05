@@ -131,3 +131,48 @@ export const auth = async (req: Request, res: Response, next: NextFunction): Pro
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as any;
+
+    if (!decoded || !decoded.userOrEstablishmentId) {
+      return next();
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, decoded.userOrEstablishmentId));
+    if (user) {
+      (req as any).user = { id: user.id, email: user.email, role: 'user' };
+      (req as any).authenticatedUser = user;
+      return next();
+    }
+
+    const [establishment] = await db
+      .select()
+      .from(establishments)
+      .where(eq(establishments.id, decoded.userOrEstablishmentId));
+    if (establishment) {
+      (req as any).user = {
+        id: establishment.id,
+        email: establishment.email,
+        role: 'establishment',
+      };
+      (req as any).establishment = establishment;
+      return next();
+    }
+
+    next();
+  } catch (error) {
+    next();
+  }
+};

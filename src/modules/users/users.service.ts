@@ -95,6 +95,19 @@ export const addFavorite = async (userId: string, establishmentId: string) => {
   return favorite;
 };
 
+export const isFavorite = async (userId: string, establishmentId: string): Promise<boolean> => {
+  const [favorite] = await db
+    .select()
+    .from(favoriteEstablishments)
+    .where(
+      and(
+        eq(favoriteEstablishments.userId, userId),
+        eq(favoriteEstablishments.establishmentId, establishmentId)
+      )
+    );
+  return !!favorite;
+};
+
 export const removeFavorite = async (userId: string, establishmentId: string) => {
   const result = await db
     .delete(favoriteEstablishments)
