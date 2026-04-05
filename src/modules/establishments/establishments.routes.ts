@@ -38,6 +38,16 @@ const router = Router();
  *             bagsSold: { type: integer }
  *             foodSaved: { type: string }
  *     UpdateEstablishmentInput:
+ *       type: object
+ *       properties:
+ *         name: { type: string }
+ *         email: { type: string, format: email }
+ *         description: { type: string, nullable: true }
+ *         address: { type: string }
+ *         workingHours: { type: string, nullable: true }
+ *         logo: { type: string, nullable: true }
+ *         banner: { type: string, nullable: true }
+ *         boundTo: { type: string, nullable: true }
  */
 
 /**
@@ -170,7 +180,7 @@ router.get('/nearby', getNearbyEstablishments);
  *               type: object
  *               properties:
  *                 message: { type: string }
- *                 establishment: { $ref: '#/components/schemas/Establishment' }
+ *                 establishment: { $ref: '#/components/schemas/EstablishmentDetail' }
  *       404:
  *         description: Establishment not found
  */
