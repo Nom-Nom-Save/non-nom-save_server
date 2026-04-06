@@ -24,17 +24,23 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
   try {
     const { establishmentId } = req.params;
     const { page, limit } = req.query;
+    const user = req.user;
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    const { reviews, total } = await reviewsService.getEstablishmentReviews(
-      establishmentId as string,
-      pagination
-    );
+    const { reviews, total, rating, ratingDistribution, myReview } =
+      await reviewsService.getEstablishmentReviews(
+        establishmentId as string,
+        pagination,
+        user?.role === 'user' ? user.id : undefined
+      );
 
     if (pagination) {
       res.status(200).json({
         reviews,
+        myReview,
+        rating,
+        ratingDistribution,
         meta: {
           total,
           page: pagination.page,
@@ -43,7 +49,7 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
         },
       });
     } else {
-      res.status(200).json({ reviews });
+      res.status(200).json({ reviews, myReview, rating, ratingDistribution });
     }
   } catch (error: unknown) {
     handleError(res, error);

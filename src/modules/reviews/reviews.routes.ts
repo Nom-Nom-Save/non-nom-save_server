@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as reviewsController from './reviews.controller';
-import { userAuth } from '../../shared/middleware/auth.middleware';
+import { userAuth, optionalAuth } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
 
@@ -117,6 +117,23 @@ router.post('/', userAuth, reviewsController.createReview as any);
  *                         properties:
  *                           id: { type: string, format: uuid }
  *                           fullName: { type: string }
+ *                 myReview:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     id: { type: string, format: uuid }
+ *                     rating: { type: integer }
+ *                     comment: { type: string, nullable: true }
+ *                     createdAt: { type: string, format: date-time }
+ *                 rating: { type: string, example: "4.50" }
+ *                 ratingDistribution:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       rating: { type: integer }
+ *                       count: { type: integer }
+ *                       percentage: { type: number }
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  * /reviews/my:
  *   get:
@@ -155,7 +172,11 @@ router.post('/', userAuth, reviewsController.createReview as any);
  *                           name: { type: string }
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
-router.get('/establishment/:establishmentId', reviewsController.getEstablishmentReviews as any);
+router.get(
+  '/establishment/:establishmentId',
+  optionalAuth,
+  reviewsController.getEstablishmentReviews as any
+);
 router.get('/my', userAuth, reviewsController.getMyReviews as any);
 
 /**

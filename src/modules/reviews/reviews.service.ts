@@ -10,12 +10,60 @@ import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const getEstablishmentReviews = async (
   establishmentId: string,
-  pagination?: PaginationParams
-): Promise<{ reviews: any[]; total: number }> => {
+  pagination?: PaginationParams,
+  currentUserId?: string
+): Promise<{
+  reviews: any[];
+  total: number;
+  rating: string;
+  ratingDistribution: { rating: number; count: number; percentage: number }[];
+  myReview?: any;
+}> => {
   const whereClause = eq(reviews.establishmentId, establishmentId);
 
   const totalCountResult = await db.select({ count: count() }).from(reviews).where(whereClause);
   const total = totalCountResult[0]?.count || 0;
+
+  const [establishment] = await db
+    .select({ rating: establishments.rating })
+    .from(establishments)
+    .where(eq(establishments.id, establishmentId));
+
+  const distributionResult = await db
+    .select({
+      rating: reviews.rating,
+      count: count(),
+    })
+    .from(reviews)
+    .where(whereClause)
+    .groupBy(reviews.rating);
+
+  const distribution = [1, 2, 3, 4, 5].map(star => {
+    const found = distributionResult.find(d => d.rating === star);
+    const countVal = found?.count || 0;
+    return {
+      rating: star,
+      count: countVal,
+      percentage: total > 0 ? parseFloat(((countVal / total) * 100).toFixed(2)) : 0,
+    };
+  });
+
+  let myReview = undefined;
+  if (currentUserId) {
+    const [userReview] = await db
+      .select({
+        id: reviews.id,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        createdAt: reviews.createdAt,
+      })
+      .from(reviews)
+      .where(and(eq(reviews.establishmentId, establishmentId), eq(reviews.userId, currentUserId)));
+
+    if (userReview) {
+      myReview = userReview;
+    }
+  }
 
   let query = db
     .select({
@@ -40,7 +88,13 @@ export const getEstablishmentReviews = async (
   }
 
   const results = await query;
-  return { reviews: results, total };
+  return {
+    reviews: results,
+    total,
+    rating: establishment?.rating || '0.00',
+    ratingDistribution: distribution,
+    myReview,
+  };
 };
 
 export const getUserReviews = async (
