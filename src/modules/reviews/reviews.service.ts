@@ -158,6 +158,31 @@ export const getUserReviews = async (
   return { reviews: formattedResults, total };
 };
 
+export const getUserReviewsForEstablishment = async (
+  userId: string,
+  establishmentId: string
+): Promise<any[]> => {
+  const userReviews = await db
+    .select({
+      id: reviews.id,
+      rating: reviews.rating,
+      comment: reviews.comment,
+      createdAt: reviews.createdAt,
+    })
+    .from(reviews)
+    .where(and(eq(reviews.userId, userId), eq(reviews.establishmentId, establishmentId)))
+    .orderBy(sql`${reviews.createdAt} DESC`);
+
+  return userReviews.map(r => {
+    const editableUntil = new Date(r.createdAt.getTime() + 24 * 60 * 60 * 1000);
+    return {
+      ...r,
+      editableUntil,
+      isEditable: new Date() < editableUntil,
+    };
+  });
+};
+
 export const updateEstablishmentRating = async (establishmentId: string) => {
   const [result] = await db
     .select({
@@ -178,7 +203,7 @@ export const updateEstablishmentRating = async (establishmentId: string) => {
 
 export const createReview = async (userId: string, input: CreateReviewInput) => {
   const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 1);
 
   const recentReview = await db
     .select()
@@ -192,7 +217,7 @@ export const createReview = async (userId: string, input: CreateReviewInput) => 
     );
 
   if (recentReview.length > 0) {
-    throw new AppError('You can only review the same establishment once a week', 400);
+    throw new AppError('You can only review the same establishment once a day', 400);
   }
 
   const [newReview] = await db

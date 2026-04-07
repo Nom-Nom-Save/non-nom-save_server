@@ -83,6 +83,24 @@ export const getMyReviews = async (req: AuthenticatedRequest, res: Response) => 
   }
 };
 
+export const getUserReviewsForEstablishment = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { establishmentId } = req.params;
+
+    if (typeof establishmentId !== 'string') {
+      res.status(400).json({ message: 'Invalid establishmentId' });
+      return;
+    }
+
+    const reviews = await reviewsService.getUserReviewsForEstablishment(userId, establishmentId);
+
+    res.status(200).json({ reviews });
+  } catch (error: unknown) {
+    handleError(res, error);
+  }
+};
+
 export const updateReview = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;

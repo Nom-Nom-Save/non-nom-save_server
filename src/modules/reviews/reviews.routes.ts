@@ -180,6 +180,44 @@ router.get(
   optionalAuth,
   reviewsController.getEstablishmentReviews as any
 );
+/**
+ * @swagger
+ * /reviews/establishment/{establishmentId}/my:
+ *   get:
+ *     summary: Get reviews by current user for a specific establishment
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: establishmentId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: List of reviews retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reviews:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, format: uuid }
+ *                       rating: { type: integer }
+ *                       comment: { type: string, nullable: true }
+ *                       createdAt: { type: string, format: date-time }
+ *                       editableUntil: { type: string, format: date-time }
+ *                       isEditable: { type: boolean }
+ */
+router.get(
+  '/establishment/:establishmentId/my',
+  userAuth,
+  reviewsController.getUserReviewsForEstablishment as any
+);
 router.get('/my', userAuth, reviewsController.getMyReviews as any);
 
 /**
