@@ -58,10 +58,17 @@ export const getEstablishmentReviews = async (
         createdAt: reviews.createdAt,
       })
       .from(reviews)
-      .where(and(eq(reviews.establishmentId, establishmentId), eq(reviews.userId, currentUserId)));
+      .where(and(eq(reviews.establishmentId, establishmentId), eq(reviews.userId, currentUserId)))
+      .orderBy(sql`${reviews.createdAt} DESC`)
+      .limit(1);
 
     if (userReview) {
-      myReview = userReview;
+      const editableUntil = new Date(userReview.createdAt.getTime() + 24 * 60 * 60 * 1000);
+      myReview = {
+        ...userReview,
+        editableUntil,
+        isEditable: new Date() < editableUntil,
+      };
     }
   }
 
@@ -88,8 +95,17 @@ export const getEstablishmentReviews = async (
   }
 
   const results = await query;
+
+  const formattedResults = results.map(r => {
+    const editableUntil = new Date(r.createdAt.getTime() + 24 * 60 * 60 * 1000);
+    return {
+      ...r,
+      editableUntil,
+    };
+  });
+
   return {
-    reviews: results,
+    reviews: formattedResults,
     total,
     rating: establishment?.rating || '0.00',
     ratingDistribution: distribution,
@@ -129,7 +145,17 @@ export const getUserReviews = async (
   }
 
   const results = await query;
-  return { reviews: results, total };
+
+  const formattedResults = results.map(r => {
+    const editableUntil = new Date(r.createdAt.getTime() + 24 * 60 * 60 * 1000);
+    return {
+      ...r,
+      editableUntil,
+      isEditable: new Date() < editableUntil,
+    };
+  });
+
+  return { reviews: formattedResults, total };
 };
 
 export const updateEstablishmentRating = async (establishmentId: string) => {
@@ -151,13 +177,22 @@ export const updateEstablishmentRating = async (establishmentId: string) => {
 };
 
 export const createReview = async (userId: string, input: CreateReviewInput) => {
-  const existingReview = await db
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const recentReview = await db
     .select()
     .from(reviews)
-    .where(and(eq(reviews.userId, userId), eq(reviews.establishmentId, input.establishmentId)));
+    .where(
+      and(
+        eq(reviews.userId, userId),
+        eq(reviews.establishmentId, input.establishmentId),
+        sql`${reviews.createdAt} > ${oneWeekAgo}`
+      )
+    );
 
-  if (existingReview.length > 0) {
-    throw new AppError('You have already reviewed this establishment', 400);
+  if (recentReview.length > 0) {
+    throw new AppError('You can only review the same establishment once a week', 400);
   }
 
   const [newReview] = await db
@@ -172,7 +207,12 @@ export const createReview = async (userId: string, input: CreateReviewInput) => 
 
   const updatedEstablishment = await updateEstablishmentRating(input.establishmentId);
 
-  return { review: newReview as Review, updatedEstablishment };
+  const editableUntil = new Date(newReview.createdAt.getTime() + 24 * 60 * 60 * 1000);
+
+  return {
+    review: { ...newReview, editableUntil } as Review & { editableUntil: Date },
+    updatedEstablishment,
+  };
 };
 
 export const updateReview = async (userId: string, reviewId: string, input: UpdateReviewInput) => {
@@ -186,6 +226,14 @@ export const updateReview = async (userId: string, reviewId: string, input: Upda
     throw new AppError('You can only update your own reviews', 403);
   }
 
+  const now = new Date();
+  const createdAt = new Date(existingReview.createdAt);
+  const diffInHours = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+
+  if (diffInHours > 24) {
+    throw new AppError('Reviews can only be edited within 24 hours of creation', 400);
+  }
+
   const [updatedReview] = await db
     .update(reviews)
     .set({
@@ -197,7 +245,12 @@ export const updateReview = async (userId: string, reviewId: string, input: Upda
 
   const updatedEstablishment = await updateEstablishmentRating(existingReview.establishmentId);
 
-  return { review: updatedReview as Review, updatedEstablishment };
+  const editableUntil = new Date(updatedReview.createdAt.getTime() + 24 * 60 * 60 * 1000);
+
+  return {
+    review: { ...updatedReview, editableUntil } as Review & { editableUntil: Date },
+    updatedEstablishment,
+  };
 };
 
 export const deleteReview = async (userId: string, reviewId: string) => {

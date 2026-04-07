@@ -17,6 +17,7 @@ const router = Router();
  *         rating: { type: integer, minimum: 1, maximum: 5 }
  *         comment: { type: string, nullable: true }
  *         createdAt: { type: string, format: date-time }
+ *         editableUntil: { type: string, format: date-time }
  *     CreateReviewInput:
  *       type: object
  *       required: [establishmentId, rating]
@@ -49,7 +50,7 @@ const router = Router();
  * @swagger
  * /reviews:
  *   post:
- *     summary: Create a new review for an establishment
+ *     summary: Create a new review for an establishment (Limit once a week)
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
@@ -125,6 +126,8 @@ router.post('/', userAuth, reviewsController.createReview as any);
  *                     rating: { type: integer }
  *                     comment: { type: string, nullable: true }
  *                     createdAt: { type: string, format: date-time }
+ *                     editableUntil: { type: string, format: date-time }
+ *                     isEditable: { type: boolean }
  *                 rating: { type: string, example: "4.50" }
  *                 ratingDistribution:
  *                   type: array
@@ -183,7 +186,7 @@ router.get('/my', userAuth, reviewsController.getMyReviews as any);
  * @swagger
  * /reviews/{reviewId}:
  *   patch:
- *     summary: Update an existing review
+ *     summary: Update an existing review (Limit within 24 hours)
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
