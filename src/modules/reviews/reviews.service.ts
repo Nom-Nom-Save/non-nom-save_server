@@ -1,27 +1,42 @@
-import { and, eq, sql, avg, count } from 'drizzle-orm';
+import { and, eq, sql, avg, count, asc, desc } from 'drizzle-orm';
 import { db } from '../../database';
 import { reviews } from '../../database/schema/reviews.schema';
 import { establishments } from '../../database/schema/establishments.schema';
 import { users } from '../../database/schema/users.schema';
-import { CreateReviewInput, UpdateReviewInput, Review } from './types/reviews.type';
+import {
+  CreateReviewInput,
+  UpdateReviewInput,
+  GetEstablishmentReviewsParams,
+  GetUserReviewsForEstablishmentParams,
+  Review,
+  MyReview,
+  RatingDistributionItem,
+} from './types/reviews.type';
 import { getEstablishmentById } from '../establishments/establishments.service';
 import { AppError } from '../../shared/utils/app.error';
 import { PaginationParams } from '../../shared/types/pagination.type';
+import { SortOrder } from '../../shared/types/common.types';
+import { getEditableUntil } from '../../shared/utils/review.util';
 
-export const getEstablishmentReviews = async (
-  establishmentId: string,
-  pagination?: PaginationParams,
-  currentUserId?: string
-): Promise<{
-  reviews: any[];
+export const getEstablishmentReviews = async ({
+  establishmentId,
+  sort = SortOrder.DESC,
+  pagination,
+  currentUserId,
+  ratingFilter,
+}: GetEstablishmentReviewsParams): Promise<{
+  reviews: Review[];
   total: number;
   rating: string;
-  ratingDistribution: { rating: number; count: number; percentage: number }[];
-  myReview?: any;
+  ratingDistribution: RatingDistributionItem[];
+  myReview?: MyReview;
 }> => {
-  const whereClause = eq(reviews.establishmentId, establishmentId);
+  const baseWhere = eq(reviews.establishmentId, establishmentId);
+  const listWhere = ratingFilter ? and(baseWhere, eq(reviews.rating, ratingFilter)) : baseWhere;
 
-  const totalCountResult = await db.select({ count: count() }).from(reviews).where(whereClause);
+  const orderByClause = sort === SortOrder.ASC ? asc(reviews.createdAt) : desc(reviews.createdAt);
+
+  const totalCountResult = await db.select({ count: count() }).from(reviews).where(baseWhere);
   const total = totalCountResult[0]?.count || 0;
 
   const [establishment] = await db
@@ -35,7 +50,7 @@ export const getEstablishmentReviews = async (
       count: count(),
     })
     .from(reviews)
-    .where(whereClause)
+    .where(baseWhere)
     .groupBy(reviews.rating);
 
   const distribution = [1, 2, 3, 4, 5].map(star => {
@@ -58,12 +73,13 @@ export const getEstablishmentReviews = async (
         createdAt: reviews.createdAt,
       })
       .from(reviews)
-      .where(and(eq(reviews.establishmentId, establishmentId), eq(reviews.userId, currentUserId)))
-      .orderBy(sql`${reviews.createdAt} DESC`)
+      .where(and(baseWhere, eq(reviews.userId, currentUserId)))
+      .orderBy(orderByClause)
       .limit(1);
 
     if (userReview) {
-      const editableUntil = new Date(userReview.createdAt.getTime() + 24 * 60 * 60 * 1000);
+      const editableUntil = getEditableUntil(userReview.createdAt);
+
       myReview = {
         ...userReview,
         editableUntil,
@@ -85,8 +101,8 @@ export const getEstablishmentReviews = async (
     })
     .from(reviews)
     .innerJoin(users, eq(reviews.userId, users.id))
-    .where(whereClause)
-    .orderBy(sql`${reviews.createdAt} DESC`);
+    .where(listWhere)
+    .orderBy(orderByClause);
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
@@ -96,10 +112,11 @@ export const getEstablishmentReviews = async (
 
   const results = await query;
 
-  const formattedResults = results.map(r => {
-    const editableUntil = new Date(r.createdAt.getTime() + 24 * 60 * 60 * 1000);
+  const formattedResults = results.map(review => {
+    const editableUntil = getEditableUntil(review.createdAt);
+
     return {
-      ...r,
+      ...review,
       editableUntil,
     };
   });
@@ -116,7 +133,7 @@ export const getEstablishmentReviews = async (
 export const getUserReviews = async (
   userId: string,
   pagination?: PaginationParams
-): Promise<{ reviews: any[]; total: number }> => {
+): Promise<{ reviews: Review[]; total: number }> => {
   const whereClause = eq(reviews.userId, userId);
 
   const totalCountResult = await db.select({ count: count() }).from(reviews).where(whereClause);
@@ -146,10 +163,11 @@ export const getUserReviews = async (
 
   const results = await query;
 
-  const formattedResults = results.map(r => {
-    const editableUntil = new Date(r.createdAt.getTime() + 24 * 60 * 60 * 1000);
+  const formattedResults = results.map(review => {
+    const editableUntil = getEditableUntil(review.createdAt);
+
     return {
-      ...r,
+      ...review,
       editableUntil,
       isEditable: new Date() < editableUntil,
     };
@@ -158,10 +176,14 @@ export const getUserReviews = async (
   return { reviews: formattedResults, total };
 };
 
-export const getUserReviewsForEstablishment = async (
-  userId: string,
-  establishmentId: string
-): Promise<any[]> => {
+export const getUserReviewsForEstablishment = async ({
+  userId,
+  establishmentId,
+  sort = SortOrder.DESC,
+  ratingFilter,
+}: GetUserReviewsForEstablishmentParams): Promise<MyReview[]> => {
+  const orderByClause = sort === SortOrder.ASC ? asc(reviews.createdAt) : desc(reviews.createdAt);
+
   const userReviews = await db
     .select({
       id: reviews.id,
@@ -170,13 +192,20 @@ export const getUserReviewsForEstablishment = async (
       createdAt: reviews.createdAt,
     })
     .from(reviews)
-    .where(and(eq(reviews.userId, userId), eq(reviews.establishmentId, establishmentId)))
-    .orderBy(sql`${reviews.createdAt} DESC`);
+    .where(
+      and(
+        eq(reviews.userId, userId),
+        eq(reviews.establishmentId, establishmentId),
+        ratingFilter ? eq(reviews.rating, ratingFilter) : undefined
+      )
+    )
+    .orderBy(orderByClause);
 
-  return userReviews.map(r => {
-    const editableUntil = new Date(r.createdAt.getTime() + 24 * 60 * 60 * 1000);
+  return userReviews.map(review => {
+    const editableUntil = getEditableUntil(review.createdAt);
+
     return {
-      ...r,
+      ...review,
       editableUntil,
       isEditable: new Date() < editableUntil,
     };
@@ -202,9 +231,6 @@ export const updateEstablishmentRating = async (establishmentId: string) => {
 };
 
 export const createReview = async (userId: string, input: CreateReviewInput) => {
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 1);
-
   const recentReview = await db
     .select()
     .from(reviews)
@@ -212,7 +238,7 @@ export const createReview = async (userId: string, input: CreateReviewInput) => 
       and(
         eq(reviews.userId, userId),
         eq(reviews.establishmentId, input.establishmentId),
-        sql`${reviews.createdAt} > ${oneWeekAgo}`
+        sql`${reviews.createdAt} > ${new Date().getDate() - 1}`
       )
     );
 
@@ -232,10 +258,10 @@ export const createReview = async (userId: string, input: CreateReviewInput) => 
 
   const updatedEstablishment = await updateEstablishmentRating(input.establishmentId);
 
-  const editableUntil = new Date(newReview.createdAt.getTime() + 24 * 60 * 60 * 1000);
+  const editableUntil = new Date(newReview.createdAt);
 
   return {
-    review: { ...newReview, editableUntil } as Review & { editableUntil: Date },
+    review: { ...newReview, editableUntil },
     updatedEstablishment,
   };
 };
@@ -270,10 +296,10 @@ export const updateReview = async (userId: string, reviewId: string, input: Upda
 
   const updatedEstablishment = await updateEstablishmentRating(existingReview.establishmentId);
 
-  const editableUntil = new Date(updatedReview.createdAt.getTime() + 24 * 60 * 60 * 1000);
+  const editableUntil = getEditableUntil(updatedReview.createdAt);
 
   return {
-    review: { ...updatedReview, editableUntil } as Review & { editableUntil: Date },
+    review: { ...updatedReview, editableUntil },
     updatedEstablishment,
   };
 };
