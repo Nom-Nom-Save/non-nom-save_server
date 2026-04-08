@@ -29,3 +29,17 @@ export type UpdateEstablishmentInput = Partial<{
   banner: string | null;
   boundTo: string;
 }>;
+
+export interface EstablishmentFilterParams {
+  city?: string;
+  lat?: number;
+  lon?: number;
+  radius?: number;
+  minRating?: number;
+  productTypeIds?: string[];
+}
+
+export interface EstablishmentSortParams {
+  sortBy?: 'rating' | 'distance' | 'closingTime';
+  sortOrder?: 'asc' | 'desc';
+}
