@@ -285,6 +285,46 @@ router.get(
 
 /**
  * @swagger
+ * /reviews/establishment/{establishmentId}/distribution:
+ *   get:
+ *     summary: Get rating distribution for a specific establishment
+ *     description: Returns the overall average rating and per-star breakdown (counts and percentages) for the given establishment.
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: establishmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the establishment
+ *     responses:
+ *       200:
+ *         description: Rating distribution retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rating:
+ *                   type: string
+ *                   example: "4.50"
+ *                   description: Overall average rating of the establishment
+ *                 ratingDistribution:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/RatingDistributionItem'
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  '/establishment/:establishmentId/distribution',
+  optionalAuth,
+  reviewsController.getReviewsDistribution
+);
+
+/**
+ * @swagger
  * /reviews/establishment/{establishmentId}/my:
  *   get:
  *     summary: Get current user's reviews for a specific establishment
@@ -334,7 +374,7 @@ router.get(
 router.get(
   '/establishment/:establishmentId/my',
   userAuth,
-  reviewsController.getUserReviewsForEstablishment as any
+  reviewsController.getUserReviewsForEstablishment
 );
 
 /**
@@ -390,7 +430,7 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get('/my', userAuth, reviewsController.getMyReviews as any);
+router.get('/my', userAuth, reviewsController.getMyReviews);
 
 /**
  * @swagger
@@ -503,7 +543,7 @@ router.get('/my', userAuth, reviewsController.getMyReviews as any);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:reviewId', userAuth, reviewsController.updateReview as any);
-router.delete('/:reviewId', userAuth, reviewsController.deleteReview as any);
+router.patch('/:reviewId', userAuth, reviewsController.updateReview);
+router.delete('/:reviewId', userAuth, reviewsController.deleteReview);
 
 export default router;
