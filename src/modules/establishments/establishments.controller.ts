@@ -3,12 +3,14 @@ import {
   updateEstablishment,
   getEstablishmentById,
   getEstablishmentByIdPrivate,
-  getAllEstablishments,
-  getEstablishmentsByCity,
-  getEstablishmentsByRadius,
+  getFilteredEstablishments,
 } from './establishments.service';
 import { isFavorite } from '../users/users.service';
-import { UpdateEstablishmentInput } from './types/establishments.type';
+import {
+  UpdateEstablishmentInput,
+  EstablishmentFilterParams,
+  EstablishmentSortParams,
+} from './types/establishments.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 
 export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
@@ -39,7 +41,8 @@ export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
 
 export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
   try {
-    const { lat, lon, radius, page, limit } = req.query;
+    const { lat, lon, radius, page, limit, sortBy, sortOrder, minRating, productTypeIds } =
+      req.query;
 
     if (!lat || !lon || !radius) {
       res.status(400).json({ error: 'lat, lon, and radius are required' });
@@ -48,10 +51,25 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    const { establishments: nearby, total } = await getEstablishmentsByRadius(
-      Number(lat),
-      Number(lon),
-      Number(radius),
+    const filters: EstablishmentFilterParams = {
+      lat: Number(lat),
+      lon: Number(lon),
+      radius: Number(radius),
+      minRating: minRating ? Number(minRating) : undefined,
+      productTypeIds:
+        typeof productTypeIds === 'string'
+          ? productTypeIds.split(',')
+          : (productTypeIds as string[]),
+    };
+
+    const sorting: EstablishmentSortParams = {
+      sortBy: sortBy || 'distance',
+      sortOrder: sortOrder || 'asc',
+    };
+
+    const { establishments: nearby, total } = await getFilteredEstablishments(
+      filters,
+      sorting,
       pagination
     );
 
@@ -80,18 +98,29 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
 
 export const getEstablishments: ExpressHandler = async (req, res) => {
   try {
-    const { city, page, limit } = req.query;
-    let result: { establishments: any[]; total: number };
+    const { city, page, limit, lat, lon, radius, minRating, productTypeIds, sortBy, sortOrder } =
+      req.query;
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    if (city && typeof city === 'string') {
-      result = await getEstablishmentsByCity(city, pagination);
-    } else {
-      result = await getAllEstablishments(pagination);
-    }
+    const filters: EstablishmentFilterParams = {
+      city: city as string,
+      lat: lat ? Number(lat) : undefined,
+      lon: lon ? Number(lon) : undefined,
+      radius: radius ? Number(radius) : undefined,
+      minRating: minRating ? Number(minRating) : undefined,
+      productTypeIds:
+        typeof productTypeIds === 'string'
+          ? productTypeIds.split(',')
+          : (productTypeIds as string[]),
+    };
 
-    const { establishments, total } = result;
+    const sorting: EstablishmentSortParams = {
+      sortBy: sortBy,
+      sortOrder: sortOrder,
+    };
+
+    const { establishments, total } = await getFilteredEstablishments(filters, sorting, pagination);
 
     if (pagination) {
       res.status(200).json({

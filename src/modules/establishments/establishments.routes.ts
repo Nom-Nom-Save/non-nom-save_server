@@ -84,7 +84,7 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
  * @swagger
  * /establishments:
  *   get:
- *     summary: Get all establishments or filter by city
+ *     summary: Get all establishments with filters and sorting
  *     tags: [Establishments]
  *     parameters:
  *       - in: query
@@ -92,6 +92,34 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
  *         schema:
  *           type: string
  *         description: City name to filter establishments by address
+ *       - in: query
+ *         name: lat
+ *         schema: { type: number }
+ *         description: Latitude for distance filtering
+ *       - in: query
+ *         name: lon
+ *         schema: { type: number }
+ *         description: Longitude for distance filtering
+ *       - in: query
+ *         name: radius
+ *         schema: { type: number }
+ *         description: Radius in kilometers for distance filtering
+ *       - in: query
+ *         name: minRating
+ *         schema: { type: number }
+ *         description: Minimum rating filter
+ *       - in: query
+ *         name: productTypeIds
+ *         schema: { type: string }
+ *         description: Comma-separated product type IDs
+ *       - in: query
+ *         name: sortBy
+ *         schema: { type: string, enum: [rating, distance, closingTime] }
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema: { type: string, enum: [asc, desc] }
+ *         description: Sort order
  *       - in: query
  *         name: page
  *         schema: { type: integer, example: 1 }
@@ -136,6 +164,19 @@ router.get('/', getEstablishments);
  *         required: true
  *         schema: { type: number }
  *         description: Radius in kilometers
+ *       - in: query
+ *         name: minRating
+ *         schema: { type: number }
+ *       - in: query
+ *         name: productTypeIds
+ *         schema: { type: string }
+ *         description: Comma-separated product type IDs
+ *       - in: query
+ *         name: sortBy
+ *         schema: { type: string, enum: [rating, distance, closingTime], default: distance }
+ *       - in: query
+ *         name: sortOrder
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *       - in: query
  *         name: page
  *         schema: { type: integer, example: 1 }

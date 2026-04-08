@@ -1,4 +1,4 @@
-import { and, eq, like, sql, count, inArray } from 'drizzle-orm';
+import { and, eq, like, sql, count, inArray, gte, desc, asc, exists, or, SQL } from 'drizzle-orm';
 import { db } from '../../database';
 import { establishments } from '../../database/schema/establishments.schema';
 import { reviews } from '../../database/schema/reviews.schema';
@@ -8,10 +8,14 @@ import { menuPrices } from '../../database/schema/menu_prices.schema';
 import { menu } from '../../database/schema/menu.schema';
 import { products } from '../../database/schema/products.schema';
 import { boxes } from '../../database/schema/boxes.schema';
+import { productTypes } from '../../database/schema/product_types.schema';
+import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import {
   Establishment,
   UpdateEstablishmentInput,
   PublicEstablishment,
+  EstablishmentFilterParams,
+  EstablishmentSortParams,
 } from './types/establishments.type';
 import NodeGeocoder from 'node-geocoder';
 import { PaginationParams } from '../../shared/types/pagination.type';
@@ -31,32 +35,83 @@ const publicFields = {
   createdAt: establishments.createdAt,
 };
 
-export const getAllEstablishments = async (
+export const getFilteredEstablishments = async (
+  filters: EstablishmentFilterParams,
+  sorting: EstablishmentSortParams,
   pagination?: PaginationParams
 ): Promise<{ establishments: PublicEstablishment[]; total: number }> => {
-  const totalCountResult = await db.select({ count: count() }).from(establishments);
-  const total = totalCountResult[0]?.count || 0;
+  const whereConditions: SQL[] = [eq(establishments.isEmailVerified, true)];
 
-  let query = db.select(publicFields).from(establishments);
-
-  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
-    const limit = Number(pagination.limit);
-    const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+  if (filters.city) {
+    whereConditions.push(like(establishments.address, `%${filters.city}%`));
   }
 
-  const results = (await query) as PublicEstablishment[];
-  return { establishments: results, total };
-};
+  if (filters.minRating !== undefined) {
+    whereConditions.push(gte(establishments.rating, String(filters.minRating)));
+  }
 
-export const getEstablishmentsByCity = async (
-  city: string,
-  pagination?: PaginationParams
-): Promise<{ establishments: PublicEstablishment[]; total: number }> => {
-  const whereClause = and(
-    eq(establishments.isEmailVerified, true),
-    like(establishments.address, `%${city}%`)
-  );
+  let distanceSql: SQL | null = null;
+  if (filters.lat !== undefined && filters.lon !== undefined) {
+    distanceSql = sql`6371 * acos(
+      cos(radians(${filters.lat})) * cos(radians(${establishments.latitude})) * 
+      cos(radians(${establishments.longitude}) - radians(${filters.lon})) + 
+      sin(radians(${filters.lat})) * sin(radians(${establishments.latitude}))
+    )`;
+
+    if (filters.radius !== undefined) {
+      whereConditions.push(sql`${distanceSql} <= ${filters.radius}`);
+    }
+  }
+
+  if (filters.productTypeIds && filters.productTypeIds.length > 0) {
+    const productTypeIds = filters.productTypeIds;
+
+    whereConditions.push(
+      exists(
+        db
+          .select()
+          .from(menu)
+          .where(
+            and(
+              eq(menu.establishmentId, establishments.id),
+              eq(menu.status, 'Active'),
+              or(
+                and(
+                  eq(menu.itemType, 'Product'),
+                  exists(
+                    db
+                      .select()
+                      .from(productTypes)
+                      .where(
+                        and(
+                          eq(productTypes.idProduct, menu.itemId),
+                          inArray(productTypes.idType, productTypeIds)
+                        )
+                      )
+                  )
+                ),
+                and(
+                  eq(menu.itemType, 'Box'),
+                  exists(
+                    db
+                      .select()
+                      .from(typeBoxes)
+                      .where(
+                        and(
+                          eq(typeBoxes.boxId, menu.itemId),
+                          inArray(typeBoxes.typeId, productTypeIds)
+                        )
+                      )
+                  )
+                )
+              )
+            )
+          )
+      )
+    );
+  }
+
+  const whereClause = and(...whereConditions);
 
   const totalCountResult = await db
     .select({ count: count() })
@@ -64,51 +119,54 @@ export const getEstablishmentsByCity = async (
     .where(whereClause);
   const total = totalCountResult[0]?.count || 0;
 
-  let query = db.select(publicFields).from(establishments).where(whereClause);
-
-  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
-    const limit = Number(pagination.limit);
-    const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
-  }
-
-  const results = (await query) as PublicEstablishment[];
-  return { establishments: results, total };
-};
-
-export const getEstablishmentsByRadius = async (
-  lat: number,
-  lon: number,
-  radiusKm: number,
-  pagination?: PaginationParams
-): Promise<{ establishments: PublicEstablishment[]; total: number }> => {
-  const distanceSql = sql`6371 * acos(
-    cos(radians(${lat})) * cos(radians(latitude)) * 
-    cos(radians(longitude) - radians(${lon})) + 
-    sin(radians(${lat})) * sin(radians(latitude))
-  )`;
-
-  const whereClause = and(
-    eq(establishments.isEmailVerified, true),
-    sql`${distanceSql} <= ${radiusKm}`
-  );
-
-  const totalCountResult = await db
-    .select({ count: count() })
+  const query = db
+    .select({
+      ...publicFields,
+      ...(distanceSql ? { distance: distanceSql } : {}),
+    })
     .from(establishments)
     .where(whereClause);
-  const total = totalCountResult[0]?.count || 0;
+  if (sorting.sortBy === 'rating') {
+    query.orderBy(
+      sorting.sortOrder === 'asc' ? asc(establishments.rating) : desc(establishments.rating)
+    );
+  } else if (sorting.sortBy === 'distance' && distanceSql) {
+    query.orderBy(sorting.sortOrder === 'asc' ? asc(distanceSql) : desc(distanceSql));
+  } else if (sorting.sortBy === 'closingTime') {
+    const currentDay = sql`CASE extract(dow from now() at time zone 'utc') 
+    WHEN 0 THEN 'sun' WHEN 1 THEN 'mon' WHEN 2 THEN 'tue' 
+    WHEN 3 THEN 'wed' WHEN 4 THEN 'thu' WHEN 5 THEN 'fri' 
+    WHEN 6 THEN 'sat' END`;
 
-  let query = db.select(publicFields).from(establishments).where(whereClause);
+    const currentTime = sql`(now() at time zone 'utc')::time`;
+    const regex = sql`${currentDay} || '=([0-9:]{4,5})-([0-9:]{4,5})'`;
+    const matchSql = sql`regexp_match(${establishments.workingHours}, ${regex})`;
+    const openTimeSql = sql`(${matchSql})[1]::time`;
+    const closeTimeSql = sql`(${matchSql})[2]::time`;
+
+    const timeUntilClosing = sql`
+    CASE 
+      WHEN ${matchSql} IS NOT NULL 
+           AND ${currentTime} >= ${openTimeSql} 
+           AND ${currentTime} < ${closeTimeSql}
+      THEN ${closeTimeSql} - ${currentTime}
+      ELSE ${sorting.sortOrder === 'desc' ? sql`'-1 second'::interval` : sql`'999 hours'::interval`}
+    END
+  `;
+
+    query.orderBy(sorting.sortOrder === 'desc' ? desc(timeUntilClosing) : asc(timeUntilClosing));
+  } else {
+    query.orderBy(desc(establishments.createdAt));
+  }
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query.limit(limit).offset(offset);
   }
 
-  const results = (await query) as PublicEstablishment[];
-  return { establishments: results, total };
+  const results = await query;
+  return { establishments: results as PublicEstablishment[], total };
 };
 
 export const updateEstablishment = async (
