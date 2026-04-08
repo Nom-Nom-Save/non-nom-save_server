@@ -62,6 +62,20 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
   }
 };
 
+export const getReviewsDistribution = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { establishmentId } = req.params;
+
+    const { rating, ratingDistribution } = await reviewsService.getReviewsDistribution(
+      establishmentId as string
+    );
+
+    res.status(200).json({ rating, ratingDistribution });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 export const getMyReviews = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id;

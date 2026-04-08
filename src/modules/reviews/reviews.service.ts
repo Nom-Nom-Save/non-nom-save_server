@@ -1,4 +1,4 @@
-import { and, eq, sql, avg, count, asc, desc } from 'drizzle-orm';
+import { and, eq, sql, avg, count, asc, desc, gt } from 'drizzle-orm';
 import { db } from '../../database';
 import { reviews } from '../../database/schema/reviews.schema';
 import { establishments } from '../../database/schema/establishments.schema';
@@ -27,8 +27,6 @@ export const getEstablishmentReviews = async ({
 }: GetEstablishmentReviewsParams): Promise<{
   reviews: Review[];
   total: number;
-  rating: string;
-  ratingDistribution: RatingDistributionItem[];
   myReview?: MyReview;
 }> => {
   const baseWhere = eq(reviews.establishmentId, establishmentId);
@@ -38,30 +36,6 @@ export const getEstablishmentReviews = async ({
 
   const totalCountResult = await db.select({ count: count() }).from(reviews).where(baseWhere);
   const total = totalCountResult[0]?.count || 0;
-
-  const [establishment] = await db
-    .select({ rating: establishments.rating })
-    .from(establishments)
-    .where(eq(establishments.id, establishmentId));
-
-  const distributionResult = await db
-    .select({
-      rating: reviews.rating,
-      count: count(),
-    })
-    .from(reviews)
-    .where(baseWhere)
-    .groupBy(reviews.rating);
-
-  const distribution = [1, 2, 3, 4, 5].map(star => {
-    const found = distributionResult.find(d => d.rating === star);
-    const countVal = found?.count || 0;
-    return {
-      rating: star,
-      count: countVal,
-      percentage: total > 0 ? parseFloat(((countVal / total) * 100).toFixed(2)) : 0,
-    };
-  });
 
   let myReview = undefined;
   if (currentUserId) {
@@ -74,7 +48,7 @@ export const getEstablishmentReviews = async ({
       })
       .from(reviews)
       .where(and(baseWhere, eq(reviews.userId, currentUserId)))
-      .orderBy(orderByClause)
+      .orderBy(desc(reviews.createdAt))
       .limit(1);
 
     if (userReview) {
@@ -124,9 +98,48 @@ export const getEstablishmentReviews = async ({
   return {
     reviews: formattedResults,
     total,
+    myReview,
+  };
+};
+
+export const getReviewsDistribution = async (
+  establishmentId: string
+): Promise<{
+  rating: string;
+  ratingDistribution: RatingDistributionItem[];
+}> => {
+  const whereClause = eq(reviews.establishmentId, establishmentId);
+
+  const totalCountResult = await db.select({ count: count() }).from(reviews).where(whereClause);
+  const total = totalCountResult[0]?.count || 0;
+
+  const [establishment] = await db
+    .select({ rating: establishments.rating })
+    .from(establishments)
+    .where(eq(establishments.id, establishmentId));
+
+  const distributionResult = await db
+    .select({
+      rating: reviews.rating,
+      count: count(),
+    })
+    .from(reviews)
+    .where(whereClause)
+    .groupBy(reviews.rating);
+
+  const distribution = [1, 2, 3, 4, 5].map(star => {
+    const found = distributionResult.find(d => d.rating === star);
+    const countVal = found?.count || 0;
+    return {
+      rating: star,
+      count: countVal,
+      percentage: total > 0 ? parseFloat(((countVal / total) * 100).toFixed(2)) : 0,
+    };
+  });
+
+  return {
     rating: establishment?.rating || '0.00',
     ratingDistribution: distribution,
-    myReview,
   };
 };
 
@@ -183,7 +196,6 @@ export const getUserReviewsForEstablishment = async ({
   ratingFilter,
 }: GetUserReviewsForEstablishmentParams): Promise<MyReview[]> => {
   const orderByClause = sort === SortOrder.ASC ? asc(reviews.createdAt) : desc(reviews.createdAt);
-
   const userReviews = await db
     .select({
       id: reviews.id,
@@ -231,6 +243,9 @@ export const updateEstablishmentRating = async (establishmentId: string) => {
 };
 
 export const createReview = async (userId: string, input: CreateReviewInput) => {
+  const oneDayAgo = new Date();
+  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
   const recentReview = await db
     .select()
     .from(reviews)
@@ -238,7 +253,7 @@ export const createReview = async (userId: string, input: CreateReviewInput) => 
       and(
         eq(reviews.userId, userId),
         eq(reviews.establishmentId, input.establishmentId),
-        sql`${reviews.createdAt} > ${new Date().getDate() - 1}`
+        gt(reviews.createdAt, oneDayAgo)
       )
     );
 
