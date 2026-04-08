@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 import * as reviewsService from './reviews.service';
 import { CreateReviewInput, UpdateReviewInput } from './types/reviews.type';
 import { handleError } from '../../shared/utils/app.error';
+import { SortOrder } from '../../shared/types/common.types';
 
 export const createReview = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -24,16 +25,21 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
   try {
     const { establishmentId } = req.params;
     const { page, limit } = req.query;
+    const sort = (req.query.sort as SortOrder) ?? SortOrder.ASC;
+    const ratingFilter = req.query.ratingFilter && +req.query.ratingFilter;
     const user = req.user;
+    const currentUserId = user?.role === 'user' ? user.id : undefined;
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
     const { reviews, total, rating, ratingDistribution, myReview } =
-      await reviewsService.getEstablishmentReviews(
-        establishmentId as string,
+      await reviewsService.getEstablishmentReviews({
+        establishmentId: establishmentId as string,
+        sort,
         pagination,
-        user?.role === 'user' ? user.id : undefined
-      );
+        currentUserId,
+        ratingFilter,
+      });
 
     if (pagination) {
       res.status(200).json({
@@ -87,13 +93,20 @@ export const getUserReviewsForEstablishment = async (req: AuthenticatedRequest, 
   try {
     const userId = req.user!.id;
     const { establishmentId } = req.params;
+    const sort = (req.query.sort as SortOrder) ?? SortOrder.ASC;
+    const ratingFilter = req.query.ratingFilter && +req.query.ratingFilter;
 
     if (typeof establishmentId !== 'string') {
       res.status(400).json({ message: 'Invalid establishmentId' });
       return;
     }
 
-    const reviews = await reviewsService.getUserReviewsForEstablishment(userId, establishmentId);
+    const reviews = await reviewsService.getUserReviewsForEstablishment({
+      userId,
+      establishmentId,
+      sort,
+      ratingFilter,
+    });
 
     res.status(200).json({ reviews });
   } catch (error: unknown) {
