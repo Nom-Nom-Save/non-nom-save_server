@@ -5,15 +5,24 @@ import { establishments } from '../../database/schema/establishments.schema';
 import { users } from '../../database/schema/users.schema';
 import { eq } from 'drizzle-orm';
 import { Params } from '../types/express.type';
+import { UserType } from '../../modules/auth/types/auth.types';
+import { Establishment } from '../../modules/establishments/types/establishments.type';
+import { InferSelectModel } from 'drizzle-orm';
+
+type User = InferSelectModel<typeof users>;
 
 export interface AuthenticatedRequest extends Request<Params, any, any, any> {
-  establishment?: any;
-  authenticatedUser?: any;
+  establishment?: Establishment;
+  authenticatedUser?: User;
   user?: {
     id: string;
     email: string;
-    role: 'user' | 'establishment';
+    role: UserType;
   };
+}
+
+interface DecodedToken {
+  userOrEstablishmentId: string;
 }
 
 export const establishmentAuth = async (
@@ -29,7 +38,7 @@ export const establishmentAuth = async (
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as any;
+    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as DecodedToken | null;
 
     if (!decoded || !decoded.userOrEstablishmentId) {
       res.status(401).json({ message: 'Unauthorized: Invalid token' });
@@ -46,11 +55,16 @@ export const establishmentAuth = async (
       return;
     }
 
-    (req as any).user = { id: establishment.id, email: establishment.email, role: 'establishment' };
-    (req as any).establishment = establishment;
+    const authReq = req as AuthenticatedRequest;
+    authReq.user = {
+      id: establishment.id,
+      email: establishment.email,
+      role: UserType.ESTABLISHMENT,
+    };
+    authReq.establishment = establishment;
 
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Establishment auth error:', error);
     res.status(500).json({ message: 'Internal server error during authentication' });
   }
@@ -65,7 +79,7 @@ export const userAuth = async (req: Request, res: Response, next: NextFunction):
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as any;
+    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as DecodedToken | null;
 
     if (!decoded || !decoded.userOrEstablishmentId) {
       res.status(401).json({ message: 'Unauthorized: Invalid token' });
@@ -79,11 +93,12 @@ export const userAuth = async (req: Request, res: Response, next: NextFunction):
       return;
     }
 
-    (req as any).user = { id: user.id, email: user.email, role: 'user' };
-    (req as any).authenticatedUser = user;
+    const authReq = req as AuthenticatedRequest;
+    authReq.user = { id: user.id, email: user.email, role: UserType.USER };
+    authReq.authenticatedUser = user;
 
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('User auth error:', error);
     res.status(500).json({ message: 'Internal server error during authentication' });
   }
@@ -98,17 +113,19 @@ export const auth = async (req: Request, res: Response, next: NextFunction): Pro
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as any;
+    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as DecodedToken | null;
 
     if (!decoded || !decoded.userOrEstablishmentId) {
       res.status(401).json({ message: 'Invalid token' });
       return;
     }
 
+    const authReq = req as AuthenticatedRequest;
+
     const [user] = await db.select().from(users).where(eq(users.id, decoded.userOrEstablishmentId));
     if (user) {
-      (req as any).user = { id: user.id, email: user.email, role: 'user' };
-      (req as any).authenticatedUser = user;
+      authReq.user = { id: user.id, email: user.email, role: UserType.USER };
+      authReq.authenticatedUser = user;
       return next();
     }
 
@@ -117,17 +134,17 @@ export const auth = async (req: Request, res: Response, next: NextFunction): Pro
       .from(establishments)
       .where(eq(establishments.id, decoded.userOrEstablishmentId));
     if (establishment) {
-      (req as any).user = {
+      authReq.user = {
         id: establishment.id,
         email: establishment.email,
-        role: 'establishment',
+        role: UserType.ESTABLISHMENT,
       };
-      (req as any).establishment = establishment;
+      authReq.establishment = establishment;
       return next();
     }
 
     res.status(401).json({ message: 'User or establishment not found' });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -144,16 +161,18 @@ export const optionalAuth = async (
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as any;
+    const decoded = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!) as DecodedToken | null;
 
     if (!decoded || !decoded.userOrEstablishmentId) {
       return next();
     }
 
+    const authReq = req as AuthenticatedRequest;
+
     const [user] = await db.select().from(users).where(eq(users.id, decoded.userOrEstablishmentId));
     if (user) {
-      (req as any).user = { id: user.id, email: user.email, role: 'user' };
-      (req as any).authenticatedUser = user;
+      authReq.user = { id: user.id, email: user.email, role: UserType.USER };
+      authReq.authenticatedUser = user;
       return next();
     }
 
@@ -162,17 +181,17 @@ export const optionalAuth = async (
       .from(establishments)
       .where(eq(establishments.id, decoded.userOrEstablishmentId));
     if (establishment) {
-      (req as any).user = {
+      authReq.user = {
         id: establishment.id,
         email: establishment.email,
-        role: 'establishment',
+        role: UserType.ESTABLISHMENT,
       };
-      (req as any).establishment = establishment;
+      authReq.establishment = establishment;
       return next();
     }
 
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     next();
   }
 };

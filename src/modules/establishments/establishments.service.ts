@@ -14,11 +14,9 @@ import {
   Establishment,
   UpdateEstablishmentInput,
   PublicEstablishment,
-  EstablishmentFilterParams,
-  EstablishmentSortParams,
+  GetFilteredEstablishmentsParams,
 } from './types/establishments.type';
 import NodeGeocoder from 'node-geocoder';
-import { PaginationParams } from '../../shared/types/pagination.type';
 import { formatWeight } from '../../shared/utils/weight.util';
 
 const publicFields = {
@@ -35,11 +33,14 @@ const publicFields = {
   createdAt: establishments.createdAt,
 };
 
-export const getFilteredEstablishments = async (
-  filters: EstablishmentFilterParams,
-  sorting: EstablishmentSortParams,
-  pagination?: PaginationParams
-): Promise<{ establishments: PublicEstablishment[]; total: number }> => {
+export const getFilteredEstablishments = async ({
+  filters,
+  sorting,
+  pagination,
+}: GetFilteredEstablishmentsParams): Promise<{
+  establishments: PublicEstablishment[];
+  total: number;
+}> => {
   const whereConditions: SQL[] = [eq(establishments.isEmailVerified, true)];
 
   if (filters.city) {
@@ -165,8 +166,8 @@ export const getFilteredEstablishments = async (
     query.limit(limit).offset(offset);
   }
 
-  const results = await query;
-  return { establishments: results as PublicEstablishment[], total };
+  const results = (await query) as PublicEstablishment[];
+  return { establishments: results, total };
 };
 
 export const updateEstablishment = async (
@@ -190,7 +191,7 @@ export const updateEstablishment = async (
         dataToUpdate.latitude = String(response[0].latitude);
         dataToUpdate.longitude = String(response[0].longitude);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Geocoding error during establishment update:', error);
     }
   }
