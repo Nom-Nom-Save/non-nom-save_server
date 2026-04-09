@@ -24,14 +24,38 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
   return await db.transaction(async tx => {
     const menuPriceIds = input.items.map(i => i.menuPriceId);
 
+    const currentDay = sql`CASE extract(dow from (now() at time zone 'utc')) 
+      WHEN 0 THEN 'sun' WHEN 1 THEN 'mon' WHEN 2 THEN 'tue' 
+      WHEN 3 THEN 'wed' WHEN 4 THEN 'thu' WHEN 5 THEN 'fri' 
+      WHEN 6 THEN 'sat' END`;
+    const currentTime = sql`(now() at time zone 'utc')::time`;
+    const regex = sql`${currentDay} || '=([0-9:]{4,5})-([0-9:]{4,5})'`;
+    const matchSql = sql`regexp_match(${establishments.workingHours}, ${regex})`;
+    const openTimeSql = sql`(${matchSql})[1]::time`;
+    const closeTimeSql = sql`(${matchSql})[2]::time`;
+
+    const isOpenSql = sql<boolean>`
+      CASE 
+        WHEN ${matchSql} IS NOT NULL 
+             AND ${currentTime} >= ${openTimeSql} 
+             AND ${currentTime} < ${closeTimeSql}
+        THEN true
+        ELSE false
+      END
+    `;
+
     const itemsData = await tx
       .select({
         menuPrice: menuPrices,
         menuItem: menu,
         establishmentId: menu.establishmentId,
+        workingHours: establishments.workingHours,
+        isOpen: isOpenSql,
+        closeTime: closeTimeSql,
       })
       .from(menuPrices)
       .innerJoin(menu, eq(menuPrices.menuItemId, menu.id))
+      .innerJoin(establishments, eq(menu.establishmentId, establishments.id))
       .where(inArray(menuPrices.id, menuPriceIds));
 
     if (itemsData.length !== input.items.length) {
@@ -43,6 +67,23 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
     if (!sameEstablishment) {
       throw new Error('All items in an order must be from the same establishment');
     }
+
+    if (!itemsData[0].isOpen) {
+      throw new Error('Establishment is currently closed');
+    }
+
+    const closeTime = itemsData[0].closeTime;
+
+    const expiresAt = sql`
+      CASE 
+        WHEN ${closeTime} IS NOT NULL AND ${currentTime} < ${closeTime}::time
+        THEN LEAST(
+          timezone('utc', now()) + interval '2 hours',
+          (timezone('utc', now())::date + ${closeTime}::time)::timestamp
+        )
+        ELSE timezone('utc', now()) + interval '2 hours'
+      END
+    `;
 
     let totalPrice = 0;
     for (const item of input.items) {
@@ -64,7 +105,7 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
         totalPrice,
         orderStatus: OrderStatusConst.RESERVED,
         reservedAt: sql`timezone('utc', now())`,
-        expiresAt: sql`timezone('utc', now()) + interval '2 hours'`,
+        expiresAt,
         qrCodeData: `ORDER-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
       })
       .returning();
