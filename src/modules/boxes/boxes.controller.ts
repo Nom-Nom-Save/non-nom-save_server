@@ -1,10 +1,11 @@
 import { ExpressHandler } from '../../shared/types/express.type';
 import * as boxesService from './boxes.service';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+import { GetBoxesFilterType } from './types/boxes.type';
 
 export const createBox: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const {
       name,
       picture,
@@ -41,17 +42,17 @@ export const createBox: ExpressHandler = async (req, res) => {
 
 export const getBoxes: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const { type, page, limit } = req.query;
-    const filterType = type === 'Private' ? 'Private' : 'All';
+    const filterType: GetBoxesFilterType = type === 'Private' ? 'Private' : 'All';
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    const { boxes, total } = await boxesService.getBoxes(
-      establishment.boundTo,
+    const { boxes, total } = await boxesService.getBoxes({
+      establishmentBoundTo: establishment.boundTo,
       filterType,
-      pagination
-    );
+      pagination,
+    });
 
     if (pagination) {
       res.status(200).json({
@@ -74,7 +75,7 @@ export const getBoxes: ExpressHandler = async (req, res) => {
 
 export const updateBox: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const { id } = req.params;
     const {
       name,
@@ -119,7 +120,7 @@ export const updateBox: ExpressHandler = async (req, res) => {
 
 export const deleteBox: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const { id } = req.params;
 
     const existingBox = await boxesService.getBoxById(id!);
