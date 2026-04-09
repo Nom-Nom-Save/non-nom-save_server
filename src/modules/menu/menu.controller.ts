@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 
 export const addToMenu: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const { itemId, itemType, totalQuantity, originalPrice, discountPrice, startTime, endTime } =
       req.body;
 
@@ -13,14 +13,18 @@ export const addToMenu: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const menuEntry = await menuService.addItemToMenu(establishment.id, establishment.boundTo, {
-      itemId,
-      itemType,
-      totalQuantity,
-      originalPrice,
-      discountPrice,
-      startTime: startTime ? new Date(startTime) : undefined,
-      endTime: endTime ? new Date(endTime) : undefined,
+    const menuEntry = await menuService.addItemToMenu({
+      establishmentId: establishment.id,
+      establishmentBoundTo: establishment.boundTo,
+      data: {
+        itemId,
+        itemType,
+        totalQuantity,
+        originalPrice,
+        discountPrice,
+        startTime: startTime ? new Date(startTime) : undefined,
+        endTime: endTime ? new Date(endTime) : undefined,
+      },
     });
 
     res.status(201).json({ message: 'Item added to menu successfully', menuEntry });
@@ -33,7 +37,7 @@ export const addToMenu: ExpressHandler = async (req, res) => {
 
 export const getMenu: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const { page, limit } = req.query;
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
@@ -120,7 +124,7 @@ export const getMenuItem: ExpressHandler = async (req, res) => {
 
 export const changeStatus: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const { id } = req.params;
     const { status } = req.body;
 
@@ -129,7 +133,11 @@ export const changeStatus: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const success = await menuService.updateMenuStatus(id!, establishment.id, status);
+    const success = await menuService.updateMenuStatus({
+      menuId: id!,
+      establishmentId: establishment.id,
+      status,
+    });
 
     if (!success) {
       res.status(404).json({ message: 'Menu item not found or unauthorized' });
@@ -145,16 +153,20 @@ export const changeStatus: ExpressHandler = async (req, res) => {
 
 export const updateMenu: ExpressHandler = async (req, res) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = (req as AuthenticatedRequest).establishment!;
     const { id } = req.params;
     const { totalQuantity, originalPrice, discountPrice, startTime, endTime } = req.body;
 
-    const success = await menuService.updateMenuItem(id!, establishment.id, {
-      totalQuantity,
-      originalPrice,
-      discountPrice,
-      startTime: startTime ? new Date(startTime) : undefined,
-      endTime: endTime ? new Date(endTime) : undefined,
+    const success = await menuService.updateMenuItem({
+      menuId: id!,
+      establishmentId: establishment.id,
+      data: {
+        totalQuantity,
+        originalPrice,
+        discountPrice,
+        startTime: startTime ? new Date(startTime) : undefined,
+        endTime: endTime ? new Date(endTime) : undefined,
+      },
     });
 
     if (!success) {

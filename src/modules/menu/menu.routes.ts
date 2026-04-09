@@ -243,7 +243,6 @@ router.post('/', establishmentAuth, addToMenu);
  *                           allergens: { type: array, items: { type: string } }
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
-router.post('/', establishmentAuth, addToMenu);
 router.get('/', establishmentAuth, getMenu);
 
 /**
