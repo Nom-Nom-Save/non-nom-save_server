@@ -4,6 +4,7 @@ import * as reviewsService from './reviews.service';
 import { CreateReviewInput, UpdateReviewInput } from './types/reviews.type';
 import { handleError } from '../../shared/utils/app.error';
 import { SortOrder } from '../../shared/types/common.types';
+import { UserType } from '../auth/types/auth.types';
 
 export const createReview = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -28,25 +29,22 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
     const sort = (req.query.sort as SortOrder) ?? SortOrder.ASC;
     const ratingFilter = req.query.ratingFilter && +req.query.ratingFilter;
     const user = req.user;
-    const currentUserId = user?.role === 'user' ? user.id : undefined;
+    const currentUserId = (user?.role as string) === 'user' ? user?.id : undefined;
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    const { reviews, total, rating, ratingDistribution, myReview } =
-      await reviewsService.getEstablishmentReviews({
-        establishmentId: establishmentId as string,
-        sort,
-        pagination,
-        currentUserId,
-        ratingFilter,
-      });
+    const { reviews, total, myReview } = await reviewsService.getEstablishmentReviews({
+      establishmentId: establishmentId as string,
+      sort,
+      pagination,
+      currentUserId,
+      ratingFilter,
+    });
 
     if (pagination) {
       res.status(200).json({
         reviews,
         myReview,
-        rating,
-        ratingDistribution,
         meta: {
           total,
           page: pagination.page,
@@ -55,7 +53,7 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
         },
       });
     } else {
-      res.status(200).json({ reviews, myReview, rating, ratingDistribution });
+      res.status(200).json({ reviews, myReview });
     }
   } catch (error: unknown) {
     handleError(res, error);
