@@ -57,6 +57,10 @@ const router = Router();
  * /orders:
  *   post:
  *     summary: Create a new order
+ *     description: |
+ *       Creates a new order for the authenticated user.
+ *       The order will expire after 2 hours or when the establishment closes, whichever comes first.
+ *       Orders can only be created during the establishment's working hours.
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
@@ -87,7 +91,12 @@ const router = Router();
  *                 message: { type: string }
  *                 order: { $ref: '#/components/schemas/Order' }
  *       400:
- *         description: Bad request (e.g. not enough quantity, items from different establishments)
+ *         description: |
+ *           Bad request:
+ *           - One or more items not found in menu
+ *           - All items in an order must be from the same establishment
+ *           - Not enough quantity for item
+ *           - Establishment is currently closed
  *       403:
  *         description: Only users can create orders
  *   get:

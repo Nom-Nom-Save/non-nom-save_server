@@ -1,5 +1,6 @@
 import { establishments } from '../../../database/schema/establishments.schema';
 import { InferSelectModel } from 'drizzle-orm';
+import { PaginationParams } from '../../../shared/types/pagination.type';
 
 export type Establishment = InferSelectModel<typeof establishments>;
 
@@ -15,6 +16,7 @@ export type PublicEstablishment = {
   banner: string | null;
   rating: string | null;
   createdAt: Date | null;
+  distance?: number | string | null;
 };
 
 export type UpdateEstablishmentInput = Partial<{
@@ -42,4 +44,10 @@ export interface EstablishmentFilterParams {
 export interface EstablishmentSortParams {
   sortBy?: 'rating' | 'distance' | 'closingTime';
   sortOrder?: 'asc' | 'desc';
+}
+
+export interface GetFilteredEstablishmentsParams {
+  filters: EstablishmentFilterParams;
+  sorting: EstablishmentSortParams;
+  pagination?: PaginationParams;
 }

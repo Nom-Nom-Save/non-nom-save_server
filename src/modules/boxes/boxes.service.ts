@@ -4,9 +4,8 @@ import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { boxItems } from '../../database/schema/box_items.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { products } from '../../database/schema/products.schema';
-import { eq, or, inArray, InferSelectModel, count } from 'drizzle-orm';
-import { Box, CreateBoxInput, UpdateBoxInput } from './types/boxes.type';
-import { PaginationParams } from '../../shared/types/pagination.type';
+import { eq, or, inArray, InferSelectModel, count, SQL } from 'drizzle-orm';
+import { Box, CreateBoxInput, UpdateBoxInput, GetBoxesParams } from './types/boxes.type';
 
 type RawBox = InferSelectModel<typeof boxes>;
 
@@ -80,7 +79,6 @@ const attachTypesAndProducts = async (boxList: RawBox[]): Promise<Box[]> => {
 
   const boxIds = boxList.map(b => b.id);
 
-  // Fetch types
   const types = await db
     .select({
       boxId: typeBoxes.boxId,
@@ -90,7 +88,6 @@ const attachTypesAndProducts = async (boxList: RawBox[]): Promise<Box[]> => {
     .innerJoin(typesOfProducts, eq(typeBoxes.typeId, typesOfProducts.id))
     .where(inArray(typeBoxes.boxId, boxIds));
 
-  // Fetch products
   const boxProducts = await db
     .select({
       boxId: boxItems.boxId,
@@ -116,25 +113,25 @@ const attachTypesAndProducts = async (boxList: RawBox[]): Promise<Box[]> => {
   }));
 };
 
-export const getBoxes = async (
-  establishmentBoundTo: string,
-  filterType: 'Private' | 'All' = 'All',
-  pagination?: PaginationParams
-): Promise<{ boxes: Box[]; total: number }> => {
-  const whereClause =
+export const getBoxes = async ({
+  establishmentBoundTo,
+  filterType = 'All',
+  pagination,
+}: GetBoxesParams): Promise<{ boxes: Box[]; total: number }> => {
+  const whereClause: SQL =
     filterType === 'Private'
       ? eq(boxes.boundTo, establishmentBoundTo)
-      : or(eq(boxes.boundTo, establishmentBoundTo), eq(boxes.boundTo, '0'));
+      : or(eq(boxes.boundTo, establishmentBoundTo), eq(boxes.boundTo, '0'))!;
 
   const totalCountResult = await db.select({ count: count() }).from(boxes).where(whereClause);
   const total = totalCountResult[0]?.count || 0;
 
-  let query = db.select().from(boxes).where(whereClause);
+  const query = db.select().from(boxes).where(whereClause);
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query.limit(limit).offset(offset);
   }
 
   const boxList = await query;
@@ -154,6 +151,11 @@ export const getBoxById = async (id: string): Promise<Box | null> => {
 export const updateBox = async (id: string, data: UpdateBoxInput): Promise<Box | null> => {
   return await db.transaction(async tx => {
     const { typeIds, productIds, ...boxData } = data;
+
+    const finalBoxData: UpdateBoxInput & { minWeight?: number | null; maxWeight?: number | null } =
+      {
+        ...boxData,
+      };
 
     if (productIds !== undefined || boxData.quantityOfItems !== undefined) {
       const [existingBox] = await tx.select().from(boxes).where(eq(boxes.id, id));
@@ -190,13 +192,13 @@ export const updateBox = async (id: string, data: UpdateBoxInput): Promise<Box |
           }
         }
 
-        (boxData as any).minWeight = minWeight;
-        (boxData as any).maxWeight = maxWeight;
+        finalBoxData.minWeight = minWeight;
+        finalBoxData.maxWeight = maxWeight;
       }
     }
 
-    if (Object.keys(boxData).length > 0) {
-      await tx.update(boxes).set(boxData).where(eq(boxes.id, id));
+    if (Object.keys(finalBoxData).length > 0) {
+      await tx.update(boxes).set(finalBoxData).where(eq(boxes.id, id));
     }
 
     if (typeIds !== undefined) {

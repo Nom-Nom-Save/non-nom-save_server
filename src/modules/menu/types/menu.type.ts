@@ -30,3 +30,21 @@ export type MenuWithPrice = MenuItem & {
     allergens?: string[];
   } | null;
 };
+
+export type AddToMenuParams = {
+  establishmentId: string;
+  establishmentBoundTo: string;
+  data: AddToMenuInput;
+};
+
+export type UpdateMenuStatusParams = {
+  menuId: string;
+  establishmentId: string;
+  status: MenuStatus;
+};
+
+export type UpdateMenuItemParams = {
+  menuId: string;
+  establishmentId: string;
+  data: UpdateMenuInput;
+};

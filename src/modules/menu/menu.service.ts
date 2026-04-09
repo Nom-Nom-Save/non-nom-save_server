@@ -10,14 +10,24 @@ import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
 import { eq, and, or, inArray, lt, lte, gt, isNull, sql, count } from 'drizzle-orm';
-import { AddToMenuInput, MenuStatus, MenuWithPrice, UpdateMenuInput } from './types/menu.type';
+import {
+  AddToMenuInput,
+  AddToMenuParams,
+  MenuItem,
+  MenuItemPrice,
+  MenuStatus,
+  MenuWithPrice,
+  UpdateMenuInput,
+  UpdateMenuItemParams,
+  UpdateMenuStatusParams,
+} from './types/menu.type';
 import { PaginationParams } from '../../shared/types/pagination.type';
 
-export const addItemToMenu = async (
-  establishmentId: string,
-  establishmentBoundTo: string,
-  data: AddToMenuInput
-): Promise<any> => {
+export const addItemToMenu = async ({
+  establishmentId,
+  establishmentBoundTo,
+  data,
+}: AddToMenuParams): Promise<MenuItem & { priceData: MenuItemPrice }> => {
   return await db.transaction(async tx => {
     const table = data.itemType === 'Product' ? products : boxes;
 
@@ -62,7 +72,7 @@ export const addItemToMenu = async (
   });
 };
 
-const fetchItemDetails = async (itemId: string, itemType: string) => {
+const fetchItemDetails = async (itemId: string, itemType: 'Product' | 'Box') => {
   const table = itemType === 'Product' ? products : boxes;
   const [details] = await db.select().from(table).where(eq(table.id, itemId));
 
@@ -70,12 +80,12 @@ const fetchItemDetails = async (itemId: string, itemType: string) => {
 
   let weightInfo: string | null = null;
   if (itemType === 'Product') {
-    const product = details as any;
+    const product = details as typeof products.$inferSelect;
     if (product.weight) {
       weightInfo = `${product.weight}g`;
     }
   } else {
-    const box = details as any;
+    const box = details as typeof boxes.$inferSelect;
     if (box.minWeight !== null && box.maxWeight !== null) {
       weightInfo = `from ${box.minWeight}g to ${box.maxWeight}g`;
     }
@@ -156,12 +166,13 @@ export const getMenuForEstablishment = async (
     .select()
     .from(menu)
     .where(whereClause)
-    .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId));
+    .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId))
+    .$dynamic();
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query = query.limit(limit).offset(offset);
   }
 
   const menuItems = await query;
@@ -169,7 +180,7 @@ export const getMenuForEstablishment = async (
   const result: MenuWithPrice[] = [];
 
   for (const row of menuItems) {
-    const details = await fetchItemDetails(row.menu.itemId, row.menu.itemType);
+    const details = await fetchItemDetails(row.menu.itemId, row.menu.itemType as 'Product' | 'Box');
 
     result.push({
       ...row.menu,
@@ -194,12 +205,13 @@ export const getPublicMenu = async (
     .select()
     .from(menu)
     .where(whereClause)
-    .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId));
+    .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId))
+    .$dynamic();
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query = query.limit(limit).offset(offset);
   }
 
   const menuItems = await query;
@@ -207,7 +219,7 @@ export const getPublicMenu = async (
   const result: MenuWithPrice[] = [];
 
   for (const row of menuItems) {
-    const details = await fetchItemDetails(row.menu.itemId, row.menu.itemType);
+    const details = await fetchItemDetails(row.menu.itemId, row.menu.itemType as 'Product' | 'Box');
 
     result.push({
       ...row.menu,
@@ -228,7 +240,7 @@ export const getMenuItemById = async (menuId: string): Promise<MenuWithPrice | n
 
   if (!row) return null;
 
-  const details = await fetchItemDetails(row.menu.itemId, row.menu.itemType);
+  const details = await fetchItemDetails(row.menu.itemId, row.menu.itemType as 'Product' | 'Box');
 
   return {
     ...row.menu,
@@ -237,11 +249,11 @@ export const getMenuItemById = async (menuId: string): Promise<MenuWithPrice | n
   };
 };
 
-export const updateMenuStatus = async (
-  menuId: string,
-  establishmentId: string,
-  status: MenuStatus
-): Promise<boolean> => {
+export const updateMenuStatus = async ({
+  menuId,
+  establishmentId,
+  status,
+}: UpdateMenuStatusParams): Promise<boolean> => {
   const result = await db
     .update(menu)
     .set({ status })
@@ -251,11 +263,11 @@ export const updateMenuStatus = async (
   return result.length > 0;
 };
 
-export const updateMenuItem = async (
-  menuId: string,
-  establishmentId: string,
-  data: UpdateMenuInput
-): Promise<boolean> => {
+export const updateMenuItem = async ({
+  menuId,
+  establishmentId,
+  data,
+}: UpdateMenuItemParams): Promise<boolean> => {
   return await db.transaction(async tx => {
     const [menuItem] = await tx
       .select()
@@ -270,7 +282,7 @@ export const updateMenuItem = async (
       throw new Error('Cannot update menu item while it is active');
     }
 
-    const updateData: any = {};
+    const updateData: Partial<typeof menuPrices.$inferInsert> = {};
     if (data.totalQuantity !== undefined) {
       updateData.totalQuantity = data.totalQuantity;
       updateData.availableQuantity = data.totalQuantity;

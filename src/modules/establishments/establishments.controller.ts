@@ -12,6 +12,7 @@ import {
   EstablishmentSortParams,
 } from './types/establishments.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+import { UserType } from '../auth/types/auth.types';
 
 export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
   try {
@@ -33,7 +34,7 @@ export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
       message: 'Establishment profile retrieved successfully',
       establishment,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in getEstablishmentPrivate:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -63,15 +64,15 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
     };
 
     const sorting: EstablishmentSortParams = {
-      sortBy: sortBy || 'distance',
-      sortOrder: sortOrder || 'asc',
+      sortBy: (sortBy as 'rating' | 'distance' | 'closingTime') || 'distance',
+      sortOrder: (sortOrder as 'asc' | 'desc') || 'asc',
     };
 
-    const { establishments: nearby, total } = await getFilteredEstablishments(
+    const { establishments: nearby, total } = await getFilteredEstablishments({
       filters,
       sorting,
-      pagination
-    );
+      pagination,
+    });
 
     if (pagination) {
       res.status(200).json({
@@ -90,7 +91,7 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
         establishments: nearby,
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in getNearbyEstablishments:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -116,11 +117,15 @@ export const getEstablishments: ExpressHandler = async (req, res) => {
     };
 
     const sorting: EstablishmentSortParams = {
-      sortBy: sortBy,
-      sortOrder: sortOrder,
+      sortBy: sortBy as 'rating' | 'distance' | 'closingTime',
+      sortOrder: sortOrder as 'asc' | 'desc',
     };
 
-    const { establishments, total } = await getFilteredEstablishments(filters, sorting, pagination);
+    const { establishments, total } = await getFilteredEstablishments({
+      filters,
+      sorting,
+      pagination,
+    });
 
     if (pagination) {
       res.status(200).json({
@@ -139,7 +144,7 @@ export const getEstablishments: ExpressHandler = async (req, res) => {
         establishments,
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in getEstablishments:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -179,7 +184,7 @@ export const updateEstablishmentProfile: ExpressHandler = async (req, res) => {
       message: 'Establishment profile updated successfully',
       establishment: updated,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in updateEstablishmentProfile:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -203,7 +208,7 @@ export const getEstablishment: ExpressHandler = async (req, res) => {
     }
 
     let favoriteStatus = false;
-    if (user && user.role === 'user') {
+    if (user && user.role === UserType.USER) {
       favoriteStatus = await isFavorite(user.id, establishmentId);
     }
 
@@ -214,7 +219,7 @@ export const getEstablishment: ExpressHandler = async (req, res) => {
         isFavorite: favoriteStatus,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in getEstablishment:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

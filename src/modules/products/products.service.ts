@@ -4,11 +4,14 @@ import { productTypes } from '../../database/schema/product_types.schema';
 import { productAllergens } from '../../database/schema/product_allergens.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
-import { eq, or, inArray, InferSelectModel, count } from 'drizzle-orm';
-import { Product, CreateProductInput, UpdateProductInput } from './types/products.type';
-import { PaginationParams } from '../../shared/types/pagination.type';
-
-type RawProduct = InferSelectModel<typeof products>;
+import { eq, or, inArray, count } from 'drizzle-orm';
+import {
+  Product,
+  CreateProductInput,
+  UpdateProductInput,
+  RawProduct,
+  GetProductsParams,
+} from './types/products.type';
 
 export const createProduct = async (data: CreateProductInput): Promise<Product> => {
   return await db.transaction(async tx => {
@@ -86,11 +89,11 @@ const attachTypesAndAllergens = async (productList: RawProduct[]): Promise<Produ
   }));
 };
 
-export const getProducts = async (
-  establishmentBoundTo: string,
-  filterType: 'Private' | 'All' = 'All',
-  pagination?: PaginationParams
-): Promise<{ products: Product[]; total: number }> => {
+export const getProducts = async ({
+  establishmentBoundTo,
+  filterType = 'All',
+  pagination,
+}: GetProductsParams): Promise<{ products: Product[]; total: number }> => {
   const whereClause =
     filterType === 'Private'
       ? eq(products.boundTo, establishmentBoundTo)
@@ -99,12 +102,12 @@ export const getProducts = async (
   const totalCountResult = await db.select({ count: count() }).from(products).where(whereClause);
   const total = totalCountResult[0]?.count || 0;
 
-  let query = db.select().from(products).where(whereClause);
+  const query = db.select().from(products).where(whereClause).$dynamic();
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query.limit(limit).offset(offset);
   }
 
   const productList = await query;

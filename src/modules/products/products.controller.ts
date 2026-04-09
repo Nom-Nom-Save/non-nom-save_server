@@ -1,10 +1,10 @@
-import { ExpressHandler } from '../../shared/types/express.type';
+import { Response } from 'express';
 import * as productService from './products.service';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 
-export const createProduct: ExpressHandler = async (req, res) => {
+export const createProduct = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = req.establishment!;
     const { name, picture, weight, description, recommendedPrice, typeIds, allergenIds, boundTo } =
       req.body;
 
@@ -31,19 +31,19 @@ export const createProduct: ExpressHandler = async (req, res) => {
   }
 };
 
-export const getProducts: ExpressHandler = async (req, res) => {
+export const getProducts = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = req.establishment!;
     const { type, page, limit } = req.query;
     const filterType = type === 'Private' ? 'Private' : 'All';
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
-    const { products, total } = await productService.getProducts(
-      establishment.boundTo,
+    const { products, total } = await productService.getProducts({
+      establishmentBoundTo: establishment.boundTo,
       filterType,
-      pagination
-    );
+      pagination,
+    });
 
     if (pagination) {
       res.status(200).json({
@@ -64,9 +64,9 @@ export const getProducts: ExpressHandler = async (req, res) => {
   }
 };
 
-export const updateProduct: ExpressHandler = async (req, res) => {
+export const updateProduct = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = req.establishment!;
     const { id } = req.params;
     const { name, picture, weight, description, recommendedPrice, typeIds, allergenIds, boundTo } =
       req.body;
@@ -78,7 +78,6 @@ export const updateProduct: ExpressHandler = async (req, res) => {
       return;
     }
 
-    // Only owner can edit
     if (existingProduct.boundTo !== establishment.boundTo) {
       res.status(403).json({ message: 'Forbidden: You can only edit your own products' });
       return;
@@ -102,9 +101,9 @@ export const updateProduct: ExpressHandler = async (req, res) => {
   }
 };
 
-export const deleteProduct: ExpressHandler = async (req, res) => {
+export const deleteProduct = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const establishment = (req as AuthenticatedRequest).establishment;
+    const establishment = req.establishment!;
     const { id } = req.params;
 
     const existingProduct = await productService.getProductById(id!);
@@ -114,7 +113,6 @@ export const deleteProduct: ExpressHandler = async (req, res) => {
       return;
     }
 
-    // Only owner can delete
     if (existingProduct.boundTo !== establishment.boundTo) {
       res.status(403).json({ message: 'Forbidden: You can only delete your own products' });
       return;

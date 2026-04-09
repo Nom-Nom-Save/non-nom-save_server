@@ -5,10 +5,16 @@ import { orders } from '../../database/schema/orders.schema';
 import { ordersDetails } from '../../database/schema/orders_details.schema';
 import { favoriteEstablishments } from '../../database/schema/favorite_establishments.schema';
 import { establishments } from '../../database/schema/establishments.schema';
-import { User, UpdateUserInput, FavoriteWithDetails } from './types/users.type';
+import {
+  User,
+  UpdateUserInput,
+  FavoriteWithDetails,
+  UserStats,
+  Favorite,
+} from './types/users.type';
 import { PaginationParams } from '../../shared/types/pagination.type';
 
-export const getUserStats = async (userId: string) => {
+export const getUserStats = async (userId: string): Promise<UserStats> => {
   const completedOrders = await db
     .select()
     .from(orders)
@@ -26,7 +32,7 @@ export const getUserStats = async (userId: string) => {
       .where(inArray(ordersDetails.orderId, orderIds));
 
     for (const detail of details) {
-      totalSavings += (detail.originalPrice - detail.price) * detail.quantity;
+      totalSavings += (Number(detail.originalPrice) - Number(detail.price)) * detail.quantity;
       totalOrderedItems += detail.quantity;
     }
   }
@@ -86,7 +92,10 @@ export const updateUser = async (
   return { ...updatedUser, ...stats };
 };
 
-export const addFavorite = async (userId: string, establishmentId: string) => {
+export const addFavorite = async (
+  userId: string,
+  establishmentId: string
+): Promise<Favorite | undefined> => {
   const [favorite] = await db
     .insert(favoriteEstablishments)
     .values({ userId, establishmentId })
@@ -108,7 +117,7 @@ export const isFavorite = async (userId: string, establishmentId: string): Promi
   return !!favorite;
 };
 
-export const removeFavorite = async (userId: string, establishmentId: string) => {
+export const removeFavorite = async (userId: string, establishmentId: string): Promise<boolean> => {
   const result = await db
     .delete(favoriteEstablishments)
     .where(
@@ -133,7 +142,7 @@ export const getFavorites = async (
     .where(whereClause);
   const total = totalCountResult[0]?.count || 0;
 
-  let query = db
+  const query = db
     .select({
       favorite: favoriteEstablishments,
       establishment: {
@@ -146,12 +155,13 @@ export const getFavorites = async (
     })
     .from(favoriteEstablishments)
     .innerJoin(establishments, eq(favoriteEstablishments.establishmentId, establishments.id))
-    .where(whereClause);
+    .where(whereClause)
+    .$dynamic();
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query.limit(limit).offset(offset);
   }
 
   const result = await query;
