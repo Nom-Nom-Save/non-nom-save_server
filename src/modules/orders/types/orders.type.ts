@@ -1,6 +1,7 @@
 import { orders } from '../../../database/schema/orders.schema';
 import { ordersDetails } from '../../../database/schema/orders_details.schema';
 import { InferSelectModel } from 'drizzle-orm';
+import { UserType } from '../../auth/types/auth.types';
 
 export type Order = InferSelectModel<typeof orders>;
 export type OrderDetail = InferSelectModel<typeof ordersDetails>;
@@ -12,7 +13,14 @@ export type CreateOrderInput = {
   }[];
 };
 
-export type OrderStatus = 'Reserved' | 'Completed' | 'Cancelled' | 'Expired';
+export const OrderStatusConst = {
+  RESERVED: 'Reserved',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  EXPIRED: 'Expired',
+} as const;
+
+export type OrderStatus = (typeof OrderStatusConst)[keyof typeof OrderStatusConst];
 
 export type OrderWithDetails = Order & {
   details: (OrderDetail & {
@@ -32,4 +40,16 @@ export type OrderWithDetails = Order & {
   establishmentBanner?: string | null;
   allergens?: string[];
   totalOrderWeight?: number;
+};
+
+export type GetOrderParams = {
+  orderId: string;
+  userOrEstablishmentId: string;
+  role: UserType;
+};
+
+export type UpdateOrderStatusParams = {
+  orderId: string;
+  status: OrderStatus;
+  establishmentId: string;
 };

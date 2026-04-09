@@ -10,8 +10,15 @@ import { productAllergens } from '../../database/schema/product_allergens.schema
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
 import { boxItems } from '../../database/schema/box_items.schema';
 import { eq, inArray, sql, and, lt, count } from 'drizzle-orm';
-import { CreateOrderInput, OrderWithDetails } from './types/orders.type';
+import {
+  CreateOrderInput,
+  GetOrderParams,
+  OrderStatusConst,
+  OrderWithDetails,
+  UpdateOrderStatusParams,
+} from './types/orders.type';
 import { PaginationParams } from '../../shared/types/pagination.type';
+import { UserType } from '../auth/types/auth.types';
 
 export const createOrder = async (userId: string, input: CreateOrderInput) => {
   return await db.transaction(async tx => {
@@ -55,7 +62,7 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
       .values({
         userId,
         totalPrice,
-        orderStatus: 'Reserved',
+        orderStatus: OrderStatusConst.RESERVED,
         reservedAt: sql`timezone('utc', now())`,
         expiresAt: sql`timezone('utc', now()) + interval '2 hours'`,
         qrCodeData: `ORDER-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
@@ -110,12 +117,13 @@ export const getUserOrders = async (
     .select()
     .from(orders)
     .where(whereClause)
-    .orderBy(sql`${orders.reservedAt} DESC`);
+    .orderBy(sql`${orders.reservedAt} DESC`)
+    .$dynamic();
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query = query.limit(limit).offset(offset);
   }
 
   const userOrders = await query;
@@ -245,12 +253,13 @@ export const getEstablishmentOrders = async (
     .innerJoin(menuPrices, eq(ordersDetails.menuPriceId, menuPrices.id))
     .innerJoin(menu, eq(menuPrices.menuItemId, menu.id))
     .where(whereClause)
-    .orderBy(sql`${orders.reservedAt} DESC`);
+    .orderBy(sql`${orders.reservedAt} DESC`)
+    .$dynamic();
 
   if (pagination?.limit !== undefined && pagination?.page !== undefined) {
     const limit = Number(pagination.limit);
     const offset = (Number(pagination.page) - 1) * limit;
-    query = query.limit(limit).offset(offset) as any;
+    query = query.limit(limit).offset(offset);
   }
 
   const establishmentOrders = await query;
@@ -359,11 +368,8 @@ export const getEstablishmentOrders = async (
   return { orders: results, total };
 };
 
-export const updateOrderStatus = async (
-  orderId: string,
-  status: string,
-  establishmentId: string
-) => {
+export const updateOrderStatus = async (params: UpdateOrderStatusParams) => {
+  const { orderId, status, establishmentId } = params;
   const [orderCheck] = await db
     .select()
     .from(orders)
@@ -380,7 +386,7 @@ export const updateOrderStatus = async (
     .update(orders)
     .set({
       orderStatus: status,
-      completedAt: status === 'Completed' ? new Date() : null,
+      completedAt: status === OrderStatusConst.COMPLETED ? new Date() : null,
     })
     .where(eq(orders.id, orderId))
     .returning();
@@ -399,22 +405,22 @@ export const cancelOrder = async (orderId: string, userId: string) => {
       throw new Error('Order not found or unauthorized');
     }
 
-    if (order.orderStatus === 'Completed') {
+    if (order.orderStatus === OrderStatusConst.COMPLETED) {
       throw new Error('Cannot cancel a completed order');
     }
 
-    if (order.orderStatus === 'Cancelled') {
+    if (order.orderStatus === OrderStatusConst.CANCELLED) {
       throw new Error('Order is already cancelled');
     }
 
-    if (order.orderStatus === 'Expired') {
+    if (order.orderStatus === OrderStatusConst.EXPIRED) {
       throw new Error('Cannot cancel an expired order');
     }
 
     const [updatedOrder] = await tx
       .update(orders)
       .set({
-        orderStatus: 'Cancelled',
+        orderStatus: OrderStatusConst.CANCELLED,
         expiresAt: null,
       })
       .where(eq(orders.id, orderId))
@@ -446,7 +452,10 @@ export const updateExpiredOrders = async () => {
     .select()
     .from(orders)
     .where(
-      and(eq(orders.orderStatus, 'Reserved'), lt(orders.expiresAt, sql`timezone('utc', now())`))
+      and(
+        eq(orders.orderStatus, OrderStatusConst.RESERVED),
+        lt(orders.expiresAt, sql`timezone('utc', now())`)
+      )
     );
 
   for (const order of expiredOrders) {
@@ -455,14 +464,14 @@ export const updateExpiredOrders = async () => {
       const [currentOrder] = await tx
         .select()
         .from(orders)
-        .where(and(eq(orders.id, order.id), eq(orders.orderStatus, 'Reserved')));
+        .where(and(eq(orders.id, order.id), eq(orders.orderStatus, OrderStatusConst.RESERVED)));
 
       if (!currentOrder) return;
 
       await tx
         .update(orders)
         .set({
-          orderStatus: 'Expired',
+          orderStatus: OrderStatusConst.EXPIRED,
           expiresAt: null,
         })
         .where(eq(orders.id, order.id));
@@ -494,11 +503,8 @@ export const updateExpiredOrders = async () => {
   return expiredOrders.length;
 };
 
-export const getOrderById = async (
-  orderId: string,
-  userOrEstablishmentId: string,
-  role: 'user' | 'establishment'
-): Promise<OrderWithDetails | null> => {
+export const getOrderById = async (params: GetOrderParams): Promise<OrderWithDetails | null> => {
+  const { orderId, userOrEstablishmentId, role } = params;
   const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
 
   if (!order) return null;
@@ -517,11 +523,14 @@ export const getOrderById = async (
   if (details.length === 0) return null;
 
   // Authorization check
-  if (role === 'user' && order.userId !== userOrEstablishmentId) {
+  if (role === UserType.USER && order.userId !== userOrEstablishmentId) {
     throw new Error('Unauthorized');
   }
 
-  if (role === 'establishment' && details[0].menuItem.establishmentId !== userOrEstablishmentId) {
+  if (
+    role === UserType.ESTABLISHMENT &&
+    details[0].menuItem.establishmentId !== userOrEstablishmentId
+  ) {
     throw new Error('Unauthorized');
   }
 
