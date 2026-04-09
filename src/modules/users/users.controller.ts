@@ -6,14 +6,20 @@ import {
   removeFavorite,
   getFavorites,
 } from './users.service';
-import { UpdateUserInput } from './types/users.type';
+import {
+  UpdateUserInput,
+  UserResponse,
+  FavoritesResponse,
+  PaginationQuery,
+} from './types/users.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+import { UserType } from '../auth/types/auth.types';
 
 export const getMe: ExpressHandler = async (req, res) => {
   try {
     const authUser = (req as AuthenticatedRequest).user;
 
-    if (!authUser || authUser.role !== 'user') {
+    if (!authUser || authUser.role !== UserType.USER) {
       res.status(401).json({ error: 'Unauthorized: User only' });
       return;
     }
@@ -25,10 +31,12 @@ export const getMe: ExpressHandler = async (req, res) => {
       return;
     }
 
-    res.status(200).json({
+    const response: UserResponse = {
       message: 'User profile retrieved successfully',
       user,
-    });
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error in getMeController:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -51,10 +59,12 @@ export const getUser: ExpressHandler = async (req, res) => {
       return;
     }
 
-    res.status(200).json({
-      message: `User retrieved successfully`,
+    const response: UserResponse = {
+      message: 'User retrieved successfully',
       user,
-    });
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error in getUserController:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -91,10 +101,12 @@ export const updateUserProfile: ExpressHandler = async (req, res) => {
       return;
     }
 
-    res.status(200).json({
+    const response: UserResponse = {
       message: 'User profile updated successfully',
       user: updated,
-    });
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error in updateUserProfile:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -104,7 +116,7 @@ export const updateUserProfile: ExpressHandler = async (req, res) => {
 export const addToFavorites: ExpressHandler = async (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
-    const { establishmentId } = req.body;
+    const { establishmentId } = req.body as { establishmentId: string };
 
     if (!establishmentId) {
       res.status(400).json({ error: 'Establishment ID is required' });
@@ -150,14 +162,14 @@ export const removeFromFavorites: ExpressHandler = async (req, res) => {
 export const getMyFavorites: ExpressHandler = async (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
-    const { page, limit } = req.query;
+    const { page, limit } = req.query as PaginationQuery;
 
     const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
 
     const { favorites, total } = await getFavorites(user!.id, pagination);
 
     if (pagination) {
-      res.status(200).json({
+      const response: FavoritesResponse = {
         favorites,
         meta: {
           total,
@@ -165,9 +177,11 @@ export const getMyFavorites: ExpressHandler = async (req, res) => {
           limit: pagination.limit,
           totalPages: Math.ceil(total / pagination.limit),
         },
-      });
+      };
+      res.status(200).json(response);
     } else {
-      res.status(200).json({ favorites });
+      const response: FavoritesResponse = { favorites };
+      res.status(200).json(response);
     }
   } catch (error) {
     console.error('Error in getMyFavorites:', error);

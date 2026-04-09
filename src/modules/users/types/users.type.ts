@@ -2,11 +2,14 @@ import { users } from '../../../database/schema/users.schema';
 import { favoriteEstablishments } from '../../../database/schema/favorite_establishments.schema';
 import { InferSelectModel } from 'drizzle-orm';
 
-export type User = Omit<InferSelectModel<typeof users>, 'password'> & {
-  successfulOrdersCount?: number;
-  totalSavings?: number;
-  totalOrderedItems?: number;
-};
+export interface UserStats {
+  successfulOrdersCount: number;
+  totalSavings: number;
+  totalOrderedItems: number;
+}
+
+export type User = Omit<InferSelectModel<typeof users>, 'password'> & Partial<UserStats>;
+
 export type Favorite = InferSelectModel<typeof favoriteEstablishments>;
 
 export type UpdateUserInput = Partial<{
@@ -17,12 +20,34 @@ export type UpdateUserInput = Partial<{
   notifyNewItems: boolean;
 }>;
 
+export interface EstablishmentFavoriteInfo {
+  name: string | null;
+  address: string | null;
+  logo: string | null;
+  banner: string | null;
+  rating: string | null;
+}
+
 export type FavoriteWithDetails = Favorite & {
-  establishment: {
-    name: string | null;
-    address: string | null;
-    logo: string | null;
-    banner: string | null;
-    rating: string | null;
-  };
+  establishment: EstablishmentFavoriteInfo;
 };
+
+export interface PaginationQuery {
+  page?: string;
+  limit?: string;
+}
+
+export interface UserResponse {
+  message: string;
+  user: User;
+}
+
+export interface FavoritesResponse {
+  favorites: FavoriteWithDetails[];
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
