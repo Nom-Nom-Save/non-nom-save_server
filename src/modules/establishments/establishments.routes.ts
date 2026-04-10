@@ -5,6 +5,7 @@ import {
   getEstablishments,
   getNearbyEstablishments,
   getEstablishmentPrivate,
+  getAvailableCities,
 } from './establishments.controller';
 import { establishmentAuth, optionalAuth } from '../../shared/middleware/auth.middleware';
 
@@ -114,11 +115,11 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
  *         description: Comma-separated product type IDs
  *       - in: query
  *         name: sortBy
- *         schema: { type: string, enum: [rating, distance, closingTime] }
+ *         schema: { type: string, enum: [rating, distance, closingTime], default: distance }
  *         description: Sort field
  *       - in: query
  *         name: sortOrder
- *         schema: { type: string, enum: [asc, desc] }
+ *         schema: { type: string, enum: [ASC, DESC], default: ASC }
  *         description: Sort order
  *       - in: query
  *         name: page
@@ -198,6 +199,34 @@ router.get('/', getEstablishments);
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
 router.get('/nearby', getNearbyEstablishments);
+
+/**
+ * @swagger
+ * /establishments/cities:
+ *   get:
+ *     summary: Get list of available cities
+ *     description: Returns a sorted list of unique cities where verified establishments are located.
+ *     tags: [Establishments]
+ *     responses:
+ *       200:
+ *         description: Available cities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Available cities retrieved successfully
+ *                 cities:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["Kyiv", "Lviv", "Odesa"]
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/cities', getAvailableCities);
 
 /**
  * @swagger

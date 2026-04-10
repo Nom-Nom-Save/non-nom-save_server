@@ -4,7 +4,6 @@ import * as reviewsService from './reviews.service';
 import { CreateReviewInput, UpdateReviewInput } from './types/reviews.type';
 import { handleError } from '../../shared/utils/app.error';
 import { SortOrder } from '../../shared/types/common.types';
-import { UserType } from '../auth/types/auth.types';
 
 export const createReview = async (req: AuthenticatedRequest, res: Response) => {
   try {
