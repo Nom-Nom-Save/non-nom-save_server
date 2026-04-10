@@ -4,15 +4,18 @@ import {
   getEstablishmentById,
   getEstablishmentByIdPrivate,
   getFilteredEstablishments,
+  getAllEstablishmentCities,
 } from './establishments.service';
 import { isFavorite } from '../users/users.service';
 import {
   UpdateEstablishmentInput,
   EstablishmentFilterParams,
   EstablishmentSortParams,
+  EstablishmentsSortBy,
 } from './types/establishments.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 import { UserType } from '../auth/types/auth.types';
+import { SortOrder } from '../../shared/types/common.types';
 
 export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
   try {
@@ -64,8 +67,8 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
     };
 
     const sorting: EstablishmentSortParams = {
-      sortBy: (sortBy as 'rating' | 'distance' | 'closingTime') || 'distance',
-      sortOrder: (sortOrder as 'asc' | 'desc') || 'asc',
+      sortBy: sortBy as EstablishmentsSortBy,
+      sortOrder: (sortOrder as SortOrder) ?? SortOrder.DESC,
     };
 
     const { establishments: nearby, total } = await getFilteredEstablishments({
@@ -117,8 +120,8 @@ export const getEstablishments: ExpressHandler = async (req, res) => {
     };
 
     const sorting: EstablishmentSortParams = {
-      sortBy: sortBy as 'rating' | 'distance' | 'closingTime',
-      sortOrder: sortOrder as 'asc' | 'desc',
+      sortBy: sortBy as EstablishmentsSortBy,
+      sortOrder: (sortOrder as SortOrder) ?? SortOrder.DESC,
     };
 
     const { establishments, total } = await getFilteredEstablishments({
@@ -221,6 +224,18 @@ export const getEstablishment: ExpressHandler = async (req, res) => {
     });
   } catch (error: unknown) {
     console.error('Error in getEstablishment:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getAvailableCities: ExpressHandler = async (_, res) => {
+  try {
+    const cities = await getAllEstablishmentCities();
+    res.status(200).json({
+      message: 'Available cities retrieved successfully',
+      cities,
+    });
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Internal server error' });
   }
 };

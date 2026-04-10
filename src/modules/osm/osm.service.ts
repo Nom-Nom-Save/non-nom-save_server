@@ -1,3 +1,5 @@
+import { OsmAddress, OsmSearchItem } from './types/osm.types';
+
 export const searchCityOrCountry = async (query: string) => {
   const params = new URLSearchParams({
     q: query,
@@ -21,7 +23,7 @@ export const searchCityOrCountry = async (query: string) => {
   return parseSearchResponse(data);
 };
 
-export const parseSearchResponse = (data: any[]) => {
+export const parseSearchResponse = (data: OsmSearchItem[]) => {
   const seen = new Set<string>();
 
   return data
@@ -53,4 +55,29 @@ export const parseSearchResponse = (data: any[]) => {
       };
     })
     .filter(Boolean);
+};
+
+export const getCityFromCoordinates = async (lat: number, lon: number): Promise<string | null> => {
+  const params = new URLSearchParams({
+    lat: lat.toString(),
+    lon: lon.toString(),
+    format: 'json',
+    addressdetails: '1',
+    'accept-language': 'en',
+  });
+
+  const response = await fetch(`${process.env.OSM_API_URL}/reverse?${params}`, {
+    headers: {
+      'User-Agent': `nom-nom-save-api/1.0 (${process.env.EMAIL_USER})`,
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as { address?: OsmAddress };
+  const addr = data.address;
+
+  return addr?.city || addr?.town || addr?.village || addr?.hamlet || null;
 };

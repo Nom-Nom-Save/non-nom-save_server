@@ -15,9 +15,12 @@ import {
   UpdateEstablishmentInput,
   PublicEstablishment,
   GetFilteredEstablishmentsParams,
+  EstablishmentsSortBy,
 } from './types/establishments.type';
 import NodeGeocoder from 'node-geocoder';
 import { formatWeight } from '../../shared/utils/weight.util';
+import { SortOrder } from '../../shared/types/common.types';
+import { getCityFromCoordinates } from '../osm/osm.service';
 
 const publicFields = {
   id: establishments.id,
@@ -124,16 +127,20 @@ export const getFilteredEstablishments = async ({
     .select({
       ...publicFields,
       ...(distanceSql ? { distance: distanceSql } : {}),
+      reviewCount: count(reviews.id),
     })
     .from(establishments)
-    .where(whereClause);
-  if (sorting.sortBy === 'rating') {
+    .leftJoin(reviews, eq(reviews.establishmentId, establishments.id))
+    .where(whereClause)
+    .groupBy(establishments.id);
+
+  if (sorting.sortBy === EstablishmentsSortBy.RATING) {
     query.orderBy(
-      sorting.sortOrder === 'asc' ? asc(establishments.rating) : desc(establishments.rating)
+      sorting.sortOrder === SortOrder.ASC ? asc(establishments.rating) : desc(establishments.rating)
     );
-  } else if (sorting.sortBy === 'distance' && distanceSql) {
-    query.orderBy(sorting.sortOrder === 'asc' ? asc(distanceSql) : desc(distanceSql));
-  } else if (sorting.sortBy === 'closingTime') {
+  } else if (sorting.sortBy === EstablishmentsSortBy.DISTANCE && distanceSql) {
+    query.orderBy(sorting.sortOrder === SortOrder.ASC ? asc(distanceSql) : desc(distanceSql));
+  } else if (sorting.sortBy === EstablishmentsSortBy.CLOSING_TIME) {
     const currentDay = sql`CASE extract(dow from now() at time zone 'utc') 
     WHEN 0 THEN 'sun' WHEN 1 THEN 'mon' WHEN 2 THEN 'tue' 
     WHEN 3 THEN 'wed' WHEN 4 THEN 'thu' WHEN 5 THEN 'fri' 
@@ -151,11 +158,13 @@ export const getFilteredEstablishments = async ({
            AND ${currentTime} >= ${openTimeSql} 
            AND ${currentTime} < ${closeTimeSql}
       THEN ${closeTimeSql} - ${currentTime}
-      ELSE ${sorting.sortOrder === 'desc' ? sql`'-1 second'::interval` : sql`'999 hours'::interval`}
+      ELSE ${sorting.sortOrder === SortOrder.DESC ? sql`'-1 second'::interval` : sql`'999 hours'::interval`}
     END
   `;
 
-    query.orderBy(sorting.sortOrder === 'desc' ? desc(timeUntilClosing) : asc(timeUntilClosing));
+    query.orderBy(
+      sorting.sortOrder === SortOrder.DESC ? desc(timeUntilClosing) : asc(timeUntilClosing)
+    );
   } else {
     query.orderBy(desc(establishments.createdAt));
   }
@@ -167,6 +176,7 @@ export const getFilteredEstablishments = async ({
   }
 
   const results = (await query) as PublicEstablishment[];
+
   return { establishments: results, total };
 };
 
@@ -319,4 +329,37 @@ export const getEstablishmentByIdPrivate = async (
     reviewCount: reviewData?.count || 0,
     ...stats,
   };
+};
+
+export const getAllEstablishmentCities = async (): Promise<string[]> => {
+  const uniqueLocations = await db
+    .selectDistinct({
+      lat: establishments.latitude,
+      lon: establishments.longitude,
+    })
+    .from(establishments)
+    .where(
+      and(
+        eq(establishments.isEmailVerified, true),
+        sql`${establishments.latitude} IS NOT NULL`,
+        sql`${establishments.longitude} IS NOT NULL`
+      )
+    );
+
+  const citiesSet = new Set<string>();
+
+  for (const loc of uniqueLocations) {
+    try {
+      if (loc.lat && loc.lon) {
+        const city = await getCityFromCoordinates(Number(loc.lat), Number(loc.lon));
+        if (city) {
+          citiesSet.add(city);
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching city for ${loc.lat}, ${loc.lon}:`, error);
+    }
+  }
+
+  return Array.from(citiesSet).sort();
 };
