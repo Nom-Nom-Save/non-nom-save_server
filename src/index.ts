@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.config';
@@ -14,10 +14,9 @@ import ordersRoutes from './modules/orders/orders.routes';
 import metadataRoutes from './modules/metadata/metadata.routes';
 import osmRoutes from './modules/osm/osm.routes';
 import reviewsRoutes from './modules/reviews/reviews.routes';
+import subscriptionsRoutes from './modules/subscriptions/subscriptions.routes';
 import { updateExpiredMenuItems, updateScheduledMenuItems } from './modules/menu/menu.service';
 import { updateExpiredOrders } from './modules/orders/orders.service';
-
-dotenv.config();
 
 const app = express();
 
@@ -45,6 +44,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/osm', osmRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/subscriptions', subscriptionsRoutes);
 
 const PORT = parseInt(process.env.PORT || '10000', 10);
 const HOST = '0.0.0.0';

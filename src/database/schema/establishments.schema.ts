@@ -14,7 +14,7 @@ export const establishments = pgTable('establishments', {
   workingHours: varchar('working_hours', { length: 255 }),
   logo: text('logo'),
   banner: text('banner'),
-  rating: numeric('rating', { precision: 3, scale: 2 }),
+  rating: numeric('rating', { precision: 3, scale: 2 }).default('0'),
   boundTo: varchar('bound_to', { length: 255 })
     .default(sql`encode(gen_random_bytes(110), 'hex')`)
     .notNull(),
