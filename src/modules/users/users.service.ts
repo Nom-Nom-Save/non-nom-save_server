@@ -5,6 +5,9 @@ import { orders } from '../../database/schema/orders.schema';
 import { ordersDetails } from '../../database/schema/orders_details.schema';
 import { favoriteEstablishments } from '../../database/schema/favorite_establishments.schema';
 import { establishments } from '../../database/schema/establishments.schema';
+import { subscriptions } from '../../database/schema/subscriptions.schema';
+import { subscriptionPlans } from '../../database/schema/subscription_plans.schema';
+import { getSubscriptionInfo } from '../subscriptions/subscriptions.service';
 import {
   User,
   UpdateUserInput,
@@ -12,6 +15,7 @@ import {
   UserStats,
   Favorite,
 } from './types/users.type';
+import { SubscriptionInfo } from '../../shared/types/subscription.type';
 import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const getUserStats = async (userId: string): Promise<UserStats> => {
@@ -60,8 +64,9 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   }
 
   const stats = await getUserStats(userId);
+  const subscription = await getSubscriptionInfo(userId);
 
-  return { ...result, ...stats };
+  return { ...result, ...stats, subscription };
 };
 
 export const updateUser = async (
@@ -88,8 +93,9 @@ export const updateUser = async (
   }
 
   const stats = await getUserStats(userId);
+  const subscription = await getSubscriptionInfo(userId);
 
-  return { ...updatedUser, ...stats };
+  return { ...updatedUser, ...stats, subscription };
 };
 
 export const addFavorite = async (

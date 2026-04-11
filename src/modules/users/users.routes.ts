@@ -15,6 +15,12 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
+ *     SubscriptionInfo:
+ *       type: object
+ *       properties:
+ *         status: { type: string, example: "active" }
+ *         planName: { type: string, example: "Premium Plan" }
+ *         endDate: { type: string, format: date-time }
  *     UpdateUserInput:
  *       type: object
  *       properties:
@@ -43,6 +49,9 @@ const router = Router();
  *         successfulOrdersCount: { type: integer }
  *         totalSavings: { type: number }
  *         totalOrderedItems: { type: integer }
+ *         subscription:
+ *           $ref: '#/components/schemas/SubscriptionInfo'
+ *           nullable: true
  *     Favorite:
  *       type: object
  *       properties:

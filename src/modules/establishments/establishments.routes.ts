@@ -29,6 +29,12 @@ const router = Router();
  *         banner: { type: string, nullable: true }
  *         rating: { type: string, nullable: true }
  *         createdAt: { type: string, format: date-time }
+ *     SubscriptionInfo:
+ *       type: object
+ *       properties:
+ *         status: { type: string, example: "active" }
+ *         planName: { type: string, example: "Premium Plan" }
+ *         endDate: { type: string, format: date-time }
  *     EstablishmentDetail:
  *       allOf:
  *         - $ref: '#/components/schemas/Establishment'
@@ -38,6 +44,9 @@ const router = Router();
  *             isFavorite: { type: boolean }
  *             bagsSold: { type: integer }
  *             foodSaved: { type: string }
+ *             subscription:
+ *               $ref: '#/components/schemas/SubscriptionInfo'
+ *               nullable: true
  *     UpdateEstablishmentInput:
  *       type: object
  *       properties:

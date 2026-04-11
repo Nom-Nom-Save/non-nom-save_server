@@ -7,8 +7,10 @@ import {
   char,
   integer,
   boolean,
-  timestamp,
+  pgEnum,
 } from 'drizzle-orm/pg-core';
+
+export const planTargetEnum = pgEnum('plan_target', ['user', 'establishment', 'both']);
 
 export const subscriptionPlans = pgTable('subscription_plans', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -18,4 +20,5 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   currency: char('currency', { length: 3 }).notNull(),
   durationDays: integer('duration_days').notNull(),
   isActive: boolean('is_active').default(true),
+  targetType: planTargetEnum('target_type').notNull().default('both'),
 });

@@ -2,13 +2,16 @@ import { users } from '../../../database/schema/users.schema';
 import { favoriteEstablishments } from '../../../database/schema/favorite_establishments.schema';
 import { InferSelectModel } from 'drizzle-orm';
 
+import { SubscriptionInfo } from '../../../shared/types/subscription.type';
+
 export interface UserStats {
   successfulOrdersCount: number;
   totalSavings: number;
   totalOrderedItems: number;
 }
 
-export type User = Omit<InferSelectModel<typeof users>, 'password'> & Partial<UserStats>;
+export type User = Omit<InferSelectModel<typeof users>, 'password'> &
+  Partial<UserStats> & { subscription?: SubscriptionInfo | null };
 
 export type Favorite = InferSelectModel<typeof favoriteEstablishments>;
 

@@ -1,4 +1,9 @@
 import nodemailer from 'nodemailer';
+import { db } from '../../database';
+import { eq } from 'drizzle-orm';
+import { subscriptionPlans } from '../../database/schema/subscription_plans.schema';
+import { subscriptions } from '../../database/schema/subscriptions.schema';
+import { PayPalOrderDetails } from '../subscriptions/types/subscriptions.types';
 
 export const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -71,5 +76,72 @@ export const sendPasswordResetCode = async (to: string, code: string) => {
       console.error('Error name:', error.name);
     }
     throw new Error('Failed to send password reset email');
+  }
+};
+
+export const sendSubscriptionSuccessEmail = async (
+  to: string,
+  orderDetails: PayPalOrderDetails,
+  subscriptionPlanId: string
+) => {
+  try {
+    const [plan] = await db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, subscriptionPlanId));
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.paypalSubscriptionId, orderDetails.id));
+
+    if (!plan || !subscription) {
+      console.warn('Plan or subscription not found for email:', {
+        subscriptionPlanId,
+        orderId: orderDetails.id,
+      });
+      return;
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; border: 1px solid #ccc; border-radius: 8px;">
+        <h1 style="color: #2e6da4;">Subscription Successfully Activated</h1>
+        <p>Hi there,</p>
+        <p>Thank you for purchasing the <strong>${plan.name}</strong> plan.</p>
+
+        <h2>🧾 Order Info</h2>
+        <ul>
+          <li><strong>Order ID:</strong> ${orderDetails.id}</li>
+          <li><strong>Status:</strong> ${orderDetails.status}</li>
+          <li><strong>Date:</strong> ${new Date(orderDetails.createTime).toLocaleString()}</li>
+        </ul>
+
+        <h2>📋 Plan Details</h2>
+        <ul>
+          <li><strong>Name:</strong> ${plan.name}</li>
+          <li><strong>Description:</strong> ${plan.description || 'No description'}</li>
+          <li><strong>Price:</strong> ${plan.price} ${plan.currency}</li>
+          <li><strong>Duration:</strong> ${plan.durationDays} days</li>
+        </ul>
+
+        <h2>📆 Subscription Info</h2>
+        <ul>
+          <li><strong>Status:</strong> ${subscription.status}</li>
+          <li><strong>Start Date:</strong> ${new Date(subscription.startDate).toLocaleDateString()}</li>
+          <li><strong>End Date:</strong> ${new Date(subscription.endDate).toLocaleDateString()}</li>
+        </ul>
+
+        <p>If you have any questions, feel free to contact our support.</p>
+        <p>Best regards,<br/>The NonNom Team</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject: `🎉 Subscription Activated - ${plan.name}`,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending subscription success email:', error);
   }
 };

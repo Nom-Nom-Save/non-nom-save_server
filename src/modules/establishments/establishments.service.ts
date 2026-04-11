@@ -21,6 +21,7 @@ import NodeGeocoder from 'node-geocoder';
 import { formatWeight } from '../../shared/utils/weight.util';
 import { SortOrder } from '../../shared/types/common.types';
 import { getCityFromCoordinates } from '../osm/osm.service';
+import { getSubscriptionInfo } from '../subscriptions/subscriptions.service';
 
 const publicFields = {
   id: establishments.id,
@@ -216,7 +217,9 @@ export const updateEstablishment = async (
     return null;
   }
 
-  return updatedEstablishment[0];
+  const subscription = await getSubscriptionInfo(undefined, establishmentId);
+
+  return { ...updatedEstablishment[0], subscription };
 };
 
 const getEstablishmentStats = async (establishmentId: string) => {
@@ -323,11 +326,13 @@ export const getEstablishmentByIdPrivate = async (
     .where(eq(reviews.establishmentId, establishmentId));
 
   const stats = await getEstablishmentStats(establishmentId);
+  const subscription = await getSubscriptionInfo(undefined, establishmentId);
 
   return {
     ...result[0],
     reviewCount: reviewData?.count || 0,
     ...stats,
+    subscription,
   };
 };
 
