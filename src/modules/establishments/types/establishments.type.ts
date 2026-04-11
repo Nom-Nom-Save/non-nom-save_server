@@ -2,8 +2,11 @@ import { establishments } from '../../../database/schema/establishments.schema';
 import { InferSelectModel } from 'drizzle-orm';
 import { PaginationParams } from '../../../shared/types/pagination.type';
 import { SortOrder } from '../../../shared/types/common.types';
+import { SubscriptionInfo } from '../../../shared/types/subscription.type';
 
-export type Establishment = InferSelectModel<typeof establishments>;
+export type Establishment = InferSelectModel<typeof establishments> & {
+  subscription?: SubscriptionInfo | null;
+};
 
 export type PublicEstablishment = {
   id: string;

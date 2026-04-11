@@ -10,8 +10,34 @@ import {
   CreateOrderResponse,
   CaptureOrderResponse,
 } from './types/subscriptions.types';
+import { SubscriptionInfo } from '../../shared/types/subscription.type';
 
 // Комменты пока не трогать, пожалуйста, потом удалю.
+
+export const getSubscriptionInfo = async (
+  userId?: string,
+  establishmentId?: string
+): Promise<SubscriptionInfo | null> => {
+  const whereClause = userId
+    ? eq(subscriptions.userId, userId)
+    : establishmentId
+      ? eq(subscriptions.establishmentId, establishmentId)
+      : null;
+
+  if (!whereClause) return null;
+
+  const [result] = await db
+    .select({
+      status: subscriptions.status,
+      planName: subscriptionPlans.name,
+      endDate: subscriptions.endDate,
+    })
+    .from(subscriptions)
+    .innerJoin(subscriptionPlans, eq(subscriptions.subscriptionPlanId, subscriptionPlans.id))
+    .where(whereClause);
+
+  return result || null;
+};
 
 export const getSubscriptionPlans = async (targetType?: UserType) => {
   if (!targetType) {
