@@ -217,7 +217,7 @@ export const updateEstablishment = async (
     return null;
   }
 
-  const subscription = await getSubscriptionInfo(undefined, establishmentId);
+  const subscription = await getSubscriptionInfo({ establishmentId });
 
   return { ...updatedEstablishment[0], subscription };
 };
@@ -326,7 +326,7 @@ export const getEstablishmentByIdPrivate = async (
     .where(eq(reviews.establishmentId, establishmentId));
 
   const stats = await getEstablishmentStats(establishmentId);
-  const subscription = await getSubscriptionInfo(undefined, establishmentId);
+  const subscription = await getSubscriptionInfo({ establishmentId });
 
   return {
     ...result[0],

@@ -9,15 +9,20 @@ import {
   CreateSubscriptionOrderDto,
   CreateOrderResponse,
   CaptureOrderResponse,
+  GetSubscriptionInfoParams,
+  SubscriptionStatus,
+  SubscriptionTarget,
+  CreateSubscriptionOrderParams,
+  CancelSubscriptionParams,
 } from './types/subscriptions.types';
 import { SubscriptionInfo } from '../../shared/types/subscription.type';
 
 // Комменты пока не трогать, пожалуйста, потом удалю.
 
-export const getSubscriptionInfo = async (
-  userId?: string,
-  establishmentId?: string
-): Promise<SubscriptionInfo | null> => {
+export const getSubscriptionInfo = async ({
+  userId,
+  establishmentId,
+}: GetSubscriptionInfoParams): Promise<SubscriptionInfo | null> => {
   const whereClause = userId
     ? eq(subscriptions.userId, userId)
     : establishmentId
@@ -34,9 +39,21 @@ export const getSubscriptionInfo = async (
     })
     .from(subscriptions)
     .innerJoin(subscriptionPlans, eq(subscriptions.subscriptionPlanId, subscriptionPlans.id))
-    .where(whereClause);
+    .where(and(whereClause, eq(subscriptions.status, SubscriptionStatus.ACTIVE)));
 
-  return result || null;
+  if (result) {
+    return result as SubscriptionInfo;
+  }
+
+  // бесплатная подписка
+  const defaultEndDate = new Date();
+  defaultEndDate.setFullYear(defaultEndDate.getFullYear() + 1);
+
+  return {
+    status: SubscriptionStatus.ACTIVE,
+    planName: 'Free plan',
+    endDate: defaultEndDate,
+  };
 };
 
 export const getSubscriptionPlans = async (targetType?: UserType) => {
@@ -44,7 +61,8 @@ export const getSubscriptionPlans = async (targetType?: UserType) => {
     return await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true));
   }
 
-  const target = targetType as string;
+  const target =
+    targetType === UserType.USER ? SubscriptionTarget.USER : SubscriptionTarget.ESTABLISHMENT;
 
   return await db
     .select()
@@ -53,20 +71,28 @@ export const getSubscriptionPlans = async (targetType?: UserType) => {
       and(
         eq(subscriptionPlans.isActive, true),
         or(
-          eq(subscriptionPlans.targetType, target as 'user' | 'establishment' | 'both'),
-          eq(subscriptionPlans.targetType, 'both')
+          eq(subscriptionPlans.targetType, target),
+          eq(subscriptionPlans.targetType, SubscriptionTarget.BOTH)
         )
       )
     );
 };
 
-export async function createSubscriptionOrder(
-  dto: CreateSubscriptionOrderDto,
-  targetId: string,
-  targetType: UserType
-) {
+export async function createSubscriptionOrder({
+  dto,
+  targetId,
+  targetType,
+}: CreateSubscriptionOrderParams) {
   const { subscriptionPlanId } = dto;
   const PAYPAL_API = process.env.PAYPAL_API!;
+  const activeSub = await getSubscriptionInfo({
+    userId: targetType === UserType.USER ? targetId : undefined,
+    establishmentId: targetType === UserType.ESTABLISHMENT ? targetId : undefined,
+  });
+
+  if (activeSub && activeSub.planName !== 'Free plan') {
+    throw new Error('You already have an active subscription');
+  }
 
   const [plan] = await db
     .select()
@@ -138,7 +164,7 @@ export async function createSubscriptionOrder(
   const subscriptionData: Omit<typeof subscriptions.$inferInsert, 'id' | 'createdAt'> = {
     subscriptionPlanId,
     paypalSubscriptionId: orderId,
-    status: 'pending' as const,
+    status: SubscriptionStatus.PENDING,
     startDate: now, // Временно ставим сейчас, обновим при активации
     endDate: now, // Временно ставим сейчас, обновим при активации
     updatedAt: now,
@@ -221,7 +247,7 @@ export async function captureSubscriptionOrder(orderId: string) {
       await db
         .update(subscriptions)
         .set({
-          status: 'active',
+          status: SubscriptionStatus.ACTIVE,
           startDate: now,
           endDate,
           updatedAt: now,
@@ -235,8 +261,54 @@ export async function captureSubscriptionOrder(orderId: string) {
 
     return orderDetails;
   } catch (error: unknown) {
-    const err = error as { response?: { data?: { message?: string } }; message?: string };
-    console.error('Failed to capture subscription order:', err.response?.data || err.message);
-    throw new Error(err.response?.data?.message || 'Failed to capture PayPal subscription order');
+    let errorMessage = 'Failed to capture PayPal subscription order';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'response' in error &&
+      typeof error.response === 'object' &&
+      error.response !== null &&
+      'data' in error.response &&
+      typeof error.response.data === 'object' &&
+      error.response.data !== null &&
+      'message' in error.response.data &&
+      typeof error.response.data.message === 'string'
+    ) {
+      errorMessage = error.response.data.message;
+    }
+
+    console.error('Failed to capture subscription order:', error);
+    throw new Error(errorMessage);
   }
+}
+
+export async function cancelSubscription({ targetId, targetType }: CancelSubscriptionParams) {
+  const whereClause =
+    targetType === UserType.USER
+      ? eq(subscriptions.userId, targetId)
+      : eq(subscriptions.establishmentId, targetId);
+
+  const [sub] = await db
+    .select()
+    .from(subscriptions)
+    .where(and(whereClause, eq(subscriptions.status, SubscriptionStatus.ACTIVE)));
+
+  if (!sub) {
+    throw new Error('No active subscription found to cancel');
+  }
+
+  await db
+    .update(subscriptions)
+    .set({
+      status: SubscriptionStatus.CANCELLED,
+      updatedAt: new Date(),
+    })
+    .where(eq(subscriptions.id, sub.id));
+
+  return { message: 'Subscription cancelled successfully' };
 }

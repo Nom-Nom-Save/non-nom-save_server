@@ -138,4 +138,33 @@ router.post('/create-order', auth, subscriptionController.createSubscriptionOrde
  */
 router.post('/capture-order', auth, subscriptionController.captureSubscriptionOrder);
 
+/**
+ * @swagger
+ * /subscriptions/cancel:
+ *   post:
+ *     summary: Cancel the active subscription
+ *     description: Sets the status of the current active subscription to 'cancelled'.
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Subscription cancelled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription cancelled successfully"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: No active subscription found to cancel
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/cancel', auth, subscriptionController.cancelSubscription);
+
 export default router;

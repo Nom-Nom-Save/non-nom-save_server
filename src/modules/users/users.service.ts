@@ -64,7 +64,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   }
 
   const stats = await getUserStats(userId);
-  const subscription = await getSubscriptionInfo(userId);
+  const subscription = await getSubscriptionInfo({ userId });
 
   return { ...result, ...stats, subscription };
 };
@@ -93,7 +93,7 @@ export const updateUser = async (
   }
 
   const stats = await getUserStats(userId);
-  const subscription = await getSubscriptionInfo(userId);
+  const subscription = await getSubscriptionInfo({ userId });
 
   return { ...updatedUser, ...stats, subscription };
 };

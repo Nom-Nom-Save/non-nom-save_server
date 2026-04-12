@@ -1,3 +1,18 @@
+import { UserType } from '../../auth/types/auth.types';
+
+export enum SubscriptionStatus {
+  PENDING = 'pending',
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  CANCELLED = 'cancelled',
+}
+
+export enum SubscriptionTarget {
+  USER = 'user',
+  ESTABLISHMENT = 'establishment',
+  BOTH = 'both',
+}
+
 export interface CreateSubscriptionOrderDto {
   subscriptionPlanId: string;
 }
@@ -32,4 +47,20 @@ export interface CaptureOrderResponse
   create_time: string;
   update_time: string;
   [key: string]: unknown;
+}
+
+export interface GetSubscriptionInfoParams {
+  userId?: string;
+  establishmentId?: string;
+}
+
+export interface CreateSubscriptionOrderParams {
+  dto: CreateSubscriptionOrderDto;
+  targetId: string;
+  targetType: UserType;
+}
+
+export interface CancelSubscriptionParams {
+  targetId: string;
+  targetType: UserType;
 }
