@@ -131,7 +131,7 @@ export const sendSubscriptionSuccessEmail = async (
         </ul>
 
         <p>If you have any questions, feel free to contact our support.</p>
-        <p>Best regards,<br/>The NonNom Team</p>
+        <p>Best regards,<br/>The NomNom Team</p>
       </div>
     `;
 

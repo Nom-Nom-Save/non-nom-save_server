@@ -129,6 +129,21 @@ router.post('/create-order', auth, subscriptionController.createSubscriptionOrde
  *                 id:
  *                   type: string
  *                   example: "1AB23456CD7890123"
+ *                 subscriptionName:
+ *                   type: string
+ *                   example: "Premium Plan"
+ *                 description:
+ *                   type: string
+ *                   example: "All premium features included"
+ *                 price:
+ *                   type: string
+ *                   example: "19.99"
+ *                 startDate:
+ *                   type: string
+ *                   format: date-time
+ *                 endDate:
+ *                   type: string
+ *                   format: date-time
  *       401:
  *         description: Unauthorized
  *       404:

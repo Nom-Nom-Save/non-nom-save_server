@@ -43,7 +43,7 @@ export const captureSubscriptionOrder = async (req: Request, res: Response, next
   try {
     const { orderId }: CaptureSubscriptionOrderDto = req.body;
     const result = await subscriptionService.captureSubscriptionOrder(orderId);
-    res.status(200).json({ status: result.status, id: result.id });
+    res.status(200).json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const statusCode = error instanceof AppError ? error.statusCode : 500;

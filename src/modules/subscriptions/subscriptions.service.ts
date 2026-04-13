@@ -1,6 +1,8 @@
 import { db } from '../../database';
 import { subscriptionPlans } from '../../database/schema/subscription_plans.schema';
 import { subscriptions } from '../../database/schema/subscriptions.schema';
+import { users } from '../../database/schema/users.schema';
+import { establishments } from '../../database/schema/establishments.schema';
 import { sendSubscriptionSuccessEmail } from '../email/email.service';
 import { getAccessToken, paypalClient } from './paypal.util';
 import { eq, or, and } from 'drizzle-orm';
@@ -14,6 +16,7 @@ import {
   SubscriptionTarget,
   CreateSubscriptionOrderParams,
   CancelSubscriptionParams,
+  CaptureSubscriptionOrderResponse,
 } from './types/subscriptions.types';
 import { SubscriptionInfo } from '../../shared/types/subscription.type';
 
@@ -191,7 +194,9 @@ export async function createSubscriptionOrder({
   return res.data;
 }
 
-export async function captureSubscriptionOrder(orderId: string) {
+export async function captureSubscriptionOrder(
+  orderId: string
+): Promise<CaptureSubscriptionOrderResponse> {
   const accessToken = await getAccessToken();
   const PAYPAL_API = (process.env.PAYPAL_API || '').trim();
 
@@ -236,30 +241,57 @@ export async function captureSubscriptionOrder(orderId: string) {
       payer: res.data.payer,
     };
 
-    const customerEmail = orderDetails.payer?.email_address;
+    //const customerEmail = orderDetails.payer?.email_address;
+
+    let targetEmail: string | null = null;
+    if (sub.userId) {
+      const [user] = await db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, sub.userId));
+      if (user) targetEmail = user.email;
+    } else if (sub.establishmentId) {
+      const [establishment] = await db
+        .select({ email: establishments.email })
+        .from(establishments)
+        .where(eq(establishments.id, sub.establishmentId));
+      if (establishment) targetEmail = establishment.email;
+    }
+
+    const now = new Date();
+    let startDate = sub.startDate;
+    let endDate = sub.endDate;
 
     if (orderDetails.status === 'COMPLETED') {
       // 4. Активируем подписку
-      const now = new Date();
-      const endDate = new Date(now);
+      startDate = now;
+      endDate = new Date(now);
       endDate.setDate(now.getDate() + Number(plan.durationDays));
 
       await db
         .update(subscriptions)
         .set({
           status: SubscriptionStatus.ACTIVE,
-          startDate: now,
+          startDate,
           endDate,
           updatedAt: now,
         })
         .where(eq(subscriptions.id, sub.id));
 
-      if (customerEmail) {
-        await sendSubscriptionSuccessEmail(customerEmail, orderDetails, plan.id);
+      if (targetEmail) {
+        await sendSubscriptionSuccessEmail(targetEmail, orderDetails, plan.id);
       }
     }
 
-    return orderDetails;
+    return {
+      status: orderDetails.status,
+      id: orderDetails.id,
+      subscriptionName: plan.name,
+      description: plan.description,
+      price: plan.price,
+      startDate,
+      endDate,
+    };
   } catch (error: unknown) {
     let errorMessage = 'Failed to capture PayPal subscription order';
 

@@ -49,6 +49,16 @@ export interface CaptureOrderResponse
   [key: string]: unknown;
 }
 
+export interface CaptureSubscriptionOrderResponse {
+  status: string;
+  id: string;
+  subscriptionName: string;
+  description: string | null;
+  price: string;
+  startDate: Date;
+  endDate: Date;
+}
+
 export interface GetSubscriptionInfoParams {
   userId?: string;
   establishmentId?: string;
