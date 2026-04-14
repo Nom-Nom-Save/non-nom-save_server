@@ -128,11 +128,9 @@ export const getBoxes = async ({
 
   const query = db.select().from(boxes).where(whereClause);
 
-  if (pagination?.limit !== undefined && pagination?.page !== undefined) {
-    const limit = Number(pagination.limit);
-    const offset = (Number(pagination.page) - 1) * limit;
-    query.limit(limit).offset(offset);
-  }
+  const limit = Number(pagination.limit);
+  const offset = (Number(pagination.page) - 1) * limit;
+  query.limit(limit).offset(offset);
 
   const boxList = await query;
   const attachedBoxes = await attachTypesAndProducts(boxList);

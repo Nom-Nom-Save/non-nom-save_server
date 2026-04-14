@@ -4,6 +4,13 @@ import * as boxesController from './boxes.controller';
 
 const router = Router();
 
+router.post('/', establishmentAuth, boxesController.createBox);
+router.get('/', establishmentAuth, boxesController.getBoxes);
+router.patch('/:id', establishmentAuth, boxesController.updateBox);
+router.delete('/:id', establishmentAuth, boxesController.deleteBox);
+
+export default router;
+
 /**
  * @swagger
  * components:
@@ -25,6 +32,7 @@ const router = Router();
  *         products: { type: array, items: { type: string } }
  *     PaginationMeta:
  *       type: object
+ *       required: [total, page, limit, totalPages]
  *       properties:
  *         total: { type: integer }
  *         page: { type: integer }
@@ -78,10 +86,10 @@ const router = Router();
  *         schema: { type: string, enum: [Private, All] }
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
  *     responses:
  *       200:
  *         description: List of boxes retrieved successfully
@@ -89,6 +97,7 @@ const router = Router();
  *           application/json:
  *             schema:
  *               type: object
+ *               required: [boxes, meta]
  *               properties:
  *                 boxes:
  *                   type: array
@@ -96,12 +105,7 @@ const router = Router();
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  *       500:
  *         description: Internal server error
- */
-router.post('/', establishmentAuth, boxesController.createBox);
-router.get('/', establishmentAuth, boxesController.getBoxes);
-
-/**
- * @swagger
+ *
  * /boxes/{id}:
  *   patch:
  *     summary: Update a box template
@@ -169,7 +173,3 @@ router.get('/', establishmentAuth, boxesController.getBoxes);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id', establishmentAuth, boxesController.updateBox);
-router.delete('/:id', establishmentAuth, boxesController.deleteBox);
-
-export default router;
