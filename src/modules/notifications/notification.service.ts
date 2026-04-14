@@ -38,9 +38,12 @@ export class NotificationService {
     data?: Record<string, string>
   ) {
     const message: admin.messaging.Message = {
-      notification: { title, body },
       topic,
-      data: data || {},
+      data: {
+        title,
+        body,
+        ...(data || {}),
+      },
     };
 
     try {
@@ -57,9 +60,12 @@ export class NotificationService {
     data?: Record<string, string>
   ) {
     const message: admin.messaging.Message = {
-      notification: { title, body },
       token,
-      data: data || {},
+      data: {
+        title,
+        body,
+        ...(data || {}),
+      },
     };
 
     try {
