@@ -15,8 +15,10 @@ import metadataRoutes from './modules/metadata/metadata.routes';
 import osmRoutes from './modules/osm/osm.routes';
 import reviewsRoutes from './modules/reviews/reviews.routes';
 import subscriptionsRoutes from './modules/subscriptions/subscriptions.routes';
+import notificationsRoutes from './modules/notifications/notifications.routes';
 import { updateExpiredMenuItems, updateScheduledMenuItems } from './modules/menu/menu.service';
 import { updateExpiredOrders } from './modules/orders/orders.service';
+import { NotificationService } from './modules/notifications/notification.service';
 
 const app = express();
 
@@ -45,30 +47,21 @@ app.use('/api/metadata', metadataRoutes);
 app.use('/api/osm', osmRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 const PORT = parseInt(process.env.PORT || '10000', 10);
 const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
   console.log(`Server running on port ${PORT}`);
-  // const runInitialUpdates = async () => {
-  //   try {
-  //     const deactivated = await updateExpiredMenuItems();
-  //     if (deactivated > 0)
-  //       console.log(`Initially updated ${deactivated} expired menu items to Inactive`);
 
-  //     const activated = await updateScheduledMenuItems();
-  //     if (activated > 0)
-  //       console.log(`Initially activated ${activated} scheduled menu items to Active`);
+  setInterval(() => {
+    void NotificationService.checkAndNotifyClosingSoon();
+    void NotificationService.checkAndNotifyExpiringOrders();
+  }, 3600000);
 
-  //     const expired = await updateExpiredOrders();
-  //     if (expired > 0) console.log(`Initially updated ${expired} expired orders to Expired`);
-  //   } catch (err) {
-  //     console.error('Error in initial menu items update:', err);
-  //   }
-  // };
-
-  // void runInitialUpdates();
+  void NotificationService.checkAndNotifyClosingSoon();
+  void NotificationService.checkAndNotifyExpiringOrders();
 
   // setInterval(() => {
   //   void (async () => {
