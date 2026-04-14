@@ -11,6 +11,15 @@ import { establishmentAuth, optionalAuth } from '../../shared/middleware/auth.mi
 
 const router = Router();
 
+router.get('/profile', establishmentAuth, getEstablishmentPrivate);
+router.get('/', getEstablishments);
+router.get('/nearby', getNearbyEstablishments);
+router.get('/cities', getAvailableCities);
+router.get('/:establishmentId', optionalAuth, getEstablishment);
+router.patch('/:establishmentId', establishmentAuth, updateEstablishmentProfile);
+
+export default router;
+
 /**
  * @swagger
  * components:
@@ -88,13 +97,12 @@ const router = Router();
  *       500:
  *         description: Server error
  */
-router.get('/profile', establishmentAuth, getEstablishmentPrivate);
 
 /**
  * @swagger
  * /establishments:
  *   get:
- *     summary: Get all establishments with filters and sorting
+ *     summary: Get all establishments with filters and sorting (Paginated)
  *     tags: [Establishments]
  *     parameters:
  *       - in: query
@@ -132,10 +140,12 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
  *         description: Sort order
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: List of establishments retrieved successfully
@@ -152,13 +162,12 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
  *                     $ref: '#/components/schemas/Establishment'
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
-router.get('/', getEstablishments);
 
 /**
  * @swagger
  * /establishments/nearby:
  *   get:
- *     summary: Get establishments within a radius of coordinates
+ *     summary: Get establishments within a radius of coordinates (Paginated)
  *     tags: [Establishments]
  *     parameters:
  *       - in: query
@@ -189,10 +198,12 @@ router.get('/', getEstablishments);
  *         schema: { type: string, enum: [asc, desc], default: asc }
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: List of nearby establishments
@@ -207,7 +218,6 @@ router.get('/', getEstablishments);
  *                   items: { $ref: '#/components/schemas/Establishment' }
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
-router.get('/nearby', getNearbyEstablishments);
 
 /**
  * @swagger
@@ -235,7 +245,6 @@ router.get('/nearby', getNearbyEstablishments);
  *       500:
  *         description: Internal server error
  */
-router.get('/cities', getAvailableCities);
 
 /**
  * @swagger
@@ -250,7 +259,7 @@ router.get('/cities', getAvailableCities);
  *         schema:
  *           type: string
  *           format: uuid
- *     responses:
+     responses:
  *       200:
  *         description: Establishment profile retrieved successfully
  *         content:
@@ -263,7 +272,6 @@ router.get('/cities', getAvailableCities);
  *       404:
  *         description: Establishment not found
  */
-router.get('/:establishmentId', optionalAuth, getEstablishment);
 
 /**
  * @swagger
@@ -308,6 +316,3 @@ router.get('/:establishmentId', optionalAuth, getEstablishment);
  *       500:
  *         description: Server error
  */
-router.patch('/:establishmentId', establishmentAuth, updateEstablishmentProfile);
-
-export default router;

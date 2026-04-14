@@ -4,6 +4,7 @@ import * as reviewsService from './reviews.service';
 import { CreateReviewInput, UpdateReviewInput } from './types/reviews.type';
 import { handleError } from '../../shared/utils/app.error';
 import { SortOrder } from '../../shared/types/common.types';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const createReview = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -30,7 +31,10 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
     const user = req.user;
     const currentUserId = (user?.role as string) === 'user' ? user?.id : undefined;
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const { reviews, total, myReview } = await reviewsService.getEstablishmentReviews({
       establishmentId: establishmentId as string,
@@ -40,20 +44,16 @@ export const getEstablishmentReviews = async (req: AuthenticatedRequest, res: Re
       ratingFilter,
     });
 
-    if (pagination) {
-      res.status(200).json({
-        reviews,
-        myReview,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      });
-    } else {
-      res.status(200).json({ reviews, myReview });
-    }
+    res.status(200).json({
+      reviews,
+      myReview,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
   } catch (error: unknown) {
     handleError(res, error);
   }
@@ -78,23 +78,22 @@ export const getMyReviews = async (req: AuthenticatedRequest, res: Response) => 
     const userId = req.user!.id;
     const { page, limit } = req.query;
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const { reviews, total } = await reviewsService.getUserReviews(userId, pagination);
 
-    if (pagination) {
-      res.status(200).json({
-        reviews,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      });
-    } else {
-      res.status(200).json({ reviews });
-    }
+    res.status(200).json({
+      reviews,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
   } catch (error: unknown) {
     handleError(res, error);
   }

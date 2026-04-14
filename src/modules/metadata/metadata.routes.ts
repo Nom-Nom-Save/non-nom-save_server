@@ -3,6 +3,11 @@ import * as metadataController from './metadata.controller';
 
 const router = Router();
 
+router.get('/product-types', metadataController.getProductTypes);
+router.get('/allergens', metadataController.getAllergens);
+
+export default router;
+
 /**
  * @swagger
  * components:
@@ -17,18 +22,23 @@ const router = Router();
  *       properties:
  *         id: { type: string, format: uuid }
  *         name: { type: string }
- *
+ */
+
+/**
+ * @swagger
  * /metadata/product-types:
  *   get:
- *     summary: Get all product types
+ *     summary: Get all product types (Paginated)
  *     tags: [Metadata]
  *     parameters:
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: List of product types retrieved successfully
@@ -44,21 +54,22 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/product-types', metadataController.getProductTypes);
 
 /**
  * @swagger
  * /metadata/allergens:
  *   get:
- *     summary: Get all types of allergens
+ *     summary: Get all types of allergens (Paginated)
  *     tags: [Metadata]
  *     parameters:
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: List of allergens retrieved successfully
@@ -74,6 +85,3 @@ router.get('/product-types', metadataController.getProductTypes);
  *       500:
  *         description: Internal server error
  */
-router.get('/allergens', metadataController.getAllergens);
-
-export default router;

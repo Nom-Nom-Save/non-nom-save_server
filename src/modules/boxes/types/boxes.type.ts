@@ -25,5 +25,5 @@ export type GetBoxesFilterType = 'Private' | 'All';
 export type GetBoxesParams = {
   establishmentBoundTo: string;
   filterType?: GetBoxesFilterType;
-  pagination?: PaginationParams;
+  pagination: Required<PaginationParams>;
 };

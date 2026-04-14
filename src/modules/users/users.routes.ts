@@ -11,6 +11,15 @@ import { userAuth } from '../../shared/middleware/auth.middleware';
 
 const router = Router();
 
+router.get('/me', userAuth, getMe);
+router.get('/favorites', userAuth, getMyFavorites);
+router.post('/favorites', userAuth, addToFavorites);
+router.delete('/favorites/:establishmentId', userAuth, removeFromFavorites);
+router.get('/:userId', getUser);
+router.patch('/:userId', userAuth, updateUserProfile);
+
+export default router;
+
 /**
  * @swagger
  * components:
@@ -92,23 +101,24 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/me', userAuth, getMe);
 
 /**
  * @swagger
  * /users/favorites:
  *   get:
- *     summary: Get user favorite establishments
+ *     summary: Get user favorite establishments (Paginated)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: List of favorite establishments retrieved successfully
@@ -152,8 +162,6 @@ router.get('/me', userAuth, getMe);
  *       500:
  *         description: Internal server error
  */
-router.get('/favorites', userAuth, getMyFavorites);
-router.post('/favorites', userAuth, addToFavorites);
 
 /**
  * @swagger
@@ -184,7 +192,6 @@ router.post('/favorites', userAuth, addToFavorites);
  *       500:
  *         description: Internal server error
  */
-router.delete('/favorites/:establishmentId', userAuth, removeFromFavorites);
 
 /**
  * @swagger
@@ -247,7 +254,3 @@ router.delete('/favorites/:establishmentId', userAuth, removeFromFavorites);
  *       500:
  *         description: Internal server error
  */
-router.get('/:userId', getUser);
-router.patch('/:userId', userAuth, updateUserProfile);
-
-export default router;

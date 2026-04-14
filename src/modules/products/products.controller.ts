@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import * as productService from './products.service';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const createProduct = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -37,7 +38,10 @@ export const getProducts = async (req: AuthenticatedRequest, res: Response) => {
     const { type, page, limit } = req.query;
     const filterType = type === 'Private' ? 'Private' : 'All';
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const { products, total } = await productService.getProducts({
       establishmentBoundTo: establishment.boundTo,
@@ -45,19 +49,15 @@ export const getProducts = async (req: AuthenticatedRequest, res: Response) => {
       pagination,
     });
 
-    if (pagination) {
-      res.status(200).json({
-        products,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      });
-    } else {
-      res.status(200).json({ products });
-    }
+    res.status(200).json({
+      products,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
   } catch (error) {
     console.error('Error getting products:', error);
     res.status(500).json({ message: 'Internal server error' });

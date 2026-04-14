@@ -4,6 +4,14 @@ import * as ordersController from './orders.controller';
 
 const router = Router();
 
+router.post('/', userAuth, ordersController.createOrder);
+router.get('/', auth, ordersController.getMyOrders);
+router.get('/:id', auth, ordersController.getOrder);
+router.patch('/:id/status', establishmentAuth, ordersController.updateStatus);
+router.patch('/:id/cancel', userAuth, ordersController.cancelOrder);
+
+export default router;
+
 /**
  * @swagger
  * components:
@@ -100,17 +108,19 @@ const router = Router();
  *       403:
  *         description: Only users can create orders
  *   get:
- *     summary: Get orders for the authenticated user or establishment
+ *     summary: Get orders for the authenticated user or establishment (Paginated)
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: List of orders retrieved successfully
@@ -128,8 +138,6 @@ const router = Router();
  *       403:
  *         description: Forbidden
  */
-router.post('/', userAuth, ordersController.createOrder);
-router.get('/', auth, ordersController.getMyOrders);
 
 /**
  * @swagger
@@ -160,7 +168,6 @@ router.get('/', auth, ordersController.getMyOrders);
  *       404:
  *         description: Order not found
  */
-router.get('/:id', auth, ordersController.getOrder);
 
 /**
  * @swagger
@@ -199,7 +206,6 @@ router.get('/:id', auth, ordersController.getOrder);
  *       403:
  *         description: Forbidden (Access only for establishments or wrong establishment)
  */
-router.patch('/:id/status', establishmentAuth, ordersController.updateStatus);
 
 /**
  * @swagger
@@ -229,6 +235,3 @@ router.patch('/:id/status', establishmentAuth, ordersController.updateStatus);
  *       403:
  *         description: Only users can cancel their orders
  */
-router.patch('/:id/cancel', userAuth, ordersController.cancelOrder);
-
-export default router;

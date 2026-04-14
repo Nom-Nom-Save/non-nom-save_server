@@ -16,6 +16,7 @@ import {
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 import { UserType } from '../auth/types/auth.types';
 import { SortOrder } from '../../shared/types/common.types';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
   try {
@@ -53,7 +54,10 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const filters: EstablishmentFilterParams = {
       lat: Number(lat),
@@ -77,23 +81,16 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
       pagination,
     });
 
-    if (pagination) {
-      res.status(200).json({
-        message: 'Nearby establishments retrieved successfully',
-        establishments: nearby,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      });
-    } else {
-      res.status(200).json({
-        message: 'Nearby establishments retrieved successfully',
-        establishments: nearby,
-      });
-    }
+    res.status(200).json({
+      message: 'Nearby establishments retrieved successfully',
+      establishments: nearby,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
   } catch (error: unknown) {
     console.error('Error in getNearbyEstablishments:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -105,7 +102,10 @@ export const getEstablishments: ExpressHandler = async (req, res) => {
     const { city, page, limit, lat, lon, radius, minRating, productTypeIds, sortBy, sortOrder } =
       req.query;
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const filters: EstablishmentFilterParams = {
       city: city as string,
@@ -130,23 +130,16 @@ export const getEstablishments: ExpressHandler = async (req, res) => {
       pagination,
     });
 
-    if (pagination) {
-      res.status(200).json({
-        message: 'Establishments retrieved successfully',
-        establishments,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      });
-    } else {
-      res.status(200).json({
-        message: 'Establishments retrieved successfully',
-        establishments,
-      });
-    }
+    res.status(200).json({
+      message: 'Establishments retrieved successfully',
+      establishments,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
   } catch (error: unknown) {
     console.error('Error in getEstablishments:', error);
     res.status(500).json({ error: 'Internal server error' });

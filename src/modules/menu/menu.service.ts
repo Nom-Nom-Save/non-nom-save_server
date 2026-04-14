@@ -9,7 +9,10 @@ import { productAllergens } from '../../database/schema/product_allergens.schema
 import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
 import { typesOfAllergens } from '../../database/schema/types_of_allergens.schema';
+import { users } from '../../database/schema/users.schema';
+import { favoriteEstablishments } from '../../database/schema/favorite_establishments.schema';
 import { eq, and, or, inArray, lt, lte, gt, isNull, sql, count } from 'drizzle-orm';
+import { NotificationService } from '../notifications/notification.service';
 import {
   AddToMenuInput,
   AddToMenuParams,
@@ -324,7 +327,7 @@ export const updateExpiredMenuItems = async (): Promise<number> => {
 
 export const updateScheduledMenuItems = async (): Promise<number> => {
   const itemsToActivate = await db
-    .select({ id: menu.id })
+    .select({ id: menu.id, establishmentId: menu.establishmentId })
     .from(menu)
     .innerJoin(menuPrices, eq(menu.id, menuPrices.menuItemId))
     .where(
@@ -344,6 +347,42 @@ export const updateScheduledMenuItems = async (): Promise<number> => {
     .set({ status: 'Active' })
     .where(inArray(menu.id, ids))
     .returning();
+
+  if (result.length > 0) {
+    const uniqueEstablishments = Array.from(
+      new Set(itemsToActivate.map(item => item.establishmentId))
+    );
+
+    for (const estId of uniqueEstablishments) {
+      try {
+        const establishmentName = await NotificationService.getEstablishmentName(estId);
+
+        await NotificationService.sendToTopic(
+          `new_items_${estId}`,
+          'New offer!',
+          `A new offer is now available at ${establishmentName}! Check it out.`
+        );
+
+        const subscribers = await db
+          .select({ email: users.email })
+          .from(users)
+          .innerJoin(favoriteEstablishments, eq(favoriteEstablishments.userId, users.id))
+          .where(
+            and(eq(favoriteEstablishments.establishmentId, estId), eq(users.notifyNewItems, true))
+          );
+
+        for (const sub of subscribers) {
+          await NotificationService.sendEmail(
+            sub.email,
+            'New offer available!',
+            `<h3>Good news!</h3><p>A new offer is now available at <strong>${establishmentName}</strong>. Open the app to check it out!</p>`
+          );
+        }
+      } catch (error) {
+        console.error(`Error sending new item notifications for establishment ${estId}:`, error);
+      }
+    }
+  }
 
   return result.length;
 };
