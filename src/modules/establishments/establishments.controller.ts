@@ -16,6 +16,7 @@ import {
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 import { UserType } from '../auth/types/auth.types';
 import { SortOrder } from '../../shared/types/common.types';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const getEstablishmentPrivate: ExpressHandler = async (req, res) => {
   try {
@@ -53,7 +54,7 @@ export const getNearbyEstablishments: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const pagination = {
+    const pagination: Required<PaginationParams> = {
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 10,
     };
@@ -101,7 +102,7 @@ export const getEstablishments: ExpressHandler = async (req, res) => {
     const { city, page, limit, lat, lon, radius, minRating, productTypeIds, sortBy, sortOrder } =
       req.query;
 
-    const pagination = {
+    const pagination: Required<PaginationParams> = {
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 10,
     };

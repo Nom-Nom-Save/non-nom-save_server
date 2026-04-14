@@ -47,7 +47,7 @@ export interface UserResponse {
 
 export interface FavoritesResponse {
   favorites: FavoriteWithDetails[];
-  meta?: {
+  meta: {
     total: number;
     page: number;
     limit: number;

@@ -6,14 +6,10 @@ import {
   removeFavorite,
   getFavorites,
 } from './users.service';
-import {
-  UpdateUserInput,
-  UserResponse,
-  FavoritesResponse,
-  PaginationQuery,
-} from './types/users.type';
+import { UpdateUserInput, UserResponse, FavoritesResponse } from './types/users.type';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
 import { UserType } from '../auth/types/auth.types';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const getMe: ExpressHandler = async (req, res) => {
   try {
@@ -162,27 +158,25 @@ export const removeFromFavorites: ExpressHandler = async (req, res) => {
 export const getMyFavorites: ExpressHandler = async (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
-    const { page, limit } = req.query as PaginationQuery;
+    const { page, limit } = req.query;
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const { favorites, total } = await getFavorites(user!.id, pagination);
 
-    if (pagination) {
-      const response: FavoritesResponse = {
-        favorites,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      };
-      res.status(200).json(response);
-    } else {
-      const response: FavoritesResponse = { favorites };
-      res.status(200).json(response);
-    }
+    const response: FavoritesResponse = {
+      favorites,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    };
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error in getMyFavorites:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -1,6 +1,7 @@
 import { ExpressHandler } from '../../shared/types/express.type';
 import * as menuService from './menu.service';
 import { AuthenticatedRequest } from '../../shared/middleware/auth.middleware';
+import { PaginationParams } from '../../shared/types/pagination.type';
 
 export const addToMenu: ExpressHandler = async (req, res) => {
   try {
@@ -40,26 +41,25 @@ export const getMenu: ExpressHandler = async (req, res) => {
     const establishment = (req as AuthenticatedRequest).establishment!;
     const { page, limit } = req.query;
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const { menuItems, total } = await menuService.getMenuForEstablishment(
       establishment.id,
       pagination
     );
 
-    if (pagination) {
-      res.status(200).json({
-        menu: menuItems,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      });
-    } else {
-      res.status(200).json({ menu: menuItems });
-    }
+    res.status(200).json({
+      menu: menuItems,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
   } catch (error) {
     console.error('Error getting menu:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -76,23 +76,22 @@ export const getPublicMenu: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const pagination = page && limit ? { page: Number(page), limit: Number(limit) } : undefined;
+    const pagination: Required<PaginationParams> = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
 
     const { menuItems, total } = await menuService.getPublicMenu(establishmentId, pagination);
 
-    if (pagination) {
-      res.status(200).json({
-        menu: menuItems,
-        meta: {
-          total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      });
-    } else {
-      res.status(200).json({ menu: menuItems });
-    }
+    res.status(200).json({
+      menu: menuItems,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
   } catch (error) {
     console.error('Error getting public menu:', error);
     res.status(500).json({ message: 'Internal server error' });

@@ -4,6 +4,13 @@ import * as productController from './products.controller';
 
 const router = Router();
 
+router.post('/', establishmentAuth, productController.createProduct);
+router.get('/', establishmentAuth, productController.getProducts);
+router.patch('/:id', establishmentAuth, productController.updateProduct);
+router.delete('/:id', establishmentAuth, productController.deleteProduct);
+
+export default router;
+
 /**
  * @swagger
  * components:
@@ -21,7 +28,10 @@ const router = Router();
  *         createdAt: { type: string, format: date-time }
  *         types: { type: array, items: { type: string } }
  *         allergens: { type: array, items: { type: string } }
- *
+ */
+
+/**
+ * @swagger
  * /products:
  *   post:
  *     summary: Create a product template
@@ -59,7 +69,7 @@ const router = Router();
  *       500:
  *         description: Internal server error
  *   get:
- *     summary: Get product templates
+ *     summary: Get product templates (Paginated)
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -69,10 +79,12 @@ const router = Router();
  *         schema: { type: string, enum: [Private, All] }
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: List of products retrieved successfully
@@ -88,8 +100,6 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/', establishmentAuth, productController.createProduct);
-router.get('/', establishmentAuth, productController.getProducts);
 
 /**
  * @swagger
@@ -160,7 +170,3 @@ router.get('/', establishmentAuth, productController.getProducts);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id', establishmentAuth, productController.updateProduct);
-router.delete('/:id', establishmentAuth, productController.deleteProduct);
-
-export default router;

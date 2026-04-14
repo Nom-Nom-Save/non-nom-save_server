@@ -4,6 +4,28 @@ import { userAuth, optionalAuth } from '../../shared/middleware/auth.middleware'
 
 const router = Router();
 
+router.post('/', userAuth, reviewsController.createReview as any);
+router.get(
+  '/establishment/:establishmentId',
+  optionalAuth,
+  reviewsController.getEstablishmentReviews as any
+);
+router.get(
+  '/establishment/:establishmentId/distribution',
+  optionalAuth,
+  reviewsController.getReviewsDistribution
+);
+router.get(
+  '/establishment/:establishmentId/my',
+  userAuth,
+  reviewsController.getUserReviewsForEstablishment
+);
+router.get('/my', userAuth, reviewsController.getMyReviews);
+router.patch('/:reviewId', userAuth, reviewsController.updateReview);
+router.delete('/:reviewId', userAuth, reviewsController.deleteReview);
+
+export default router;
+
 /**
  * @swagger
  * components:
@@ -139,18 +161,6 @@ const router = Router();
  *           type: string
  *           format: date-time
  *           nullable: true
- *
- *     PaginationMeta:
- *       type: object
- *       properties:
- *         total:
- *           type: integer
- *         page:
- *           type: integer
- *         limit:
- *           type: integer
- *         totalPages:
- *           type: integer
  */
 
 /**
@@ -185,26 +195,17 @@ const router = Router();
  *                   $ref: '#/components/schemas/PublicEstablishment'
  *       400:
  *         description: Bad request — already reviewed this establishment today
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: You can only review the same establishment once a day
  *       401:
  *         description: Unauthorized — missing or invalid token
  *       500:
  *         description: Internal server error
  */
-router.post('/', userAuth, reviewsController.createReview as any);
 
 /**
  * @swagger
  * /reviews/establishment/{establishmentId}:
  *   get:
- *     summary: Get reviews for a specific establishment
+ *     summary: Get reviews for a specific establishment (Paginated)
  *     description: >
  *       Returns paginated reviews for the given establishment along with
  *       overall rating, rating distribution, and (if authenticated as a regular user)
@@ -225,13 +226,15 @@ router.post('/', userAuth, reviewsController.createReview as any);
  *         schema:
  *           type: integer
  *           example: 1
- *         description: Page number (requires limit)
+ *           default: 1
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           example: 10
- *         description: Items per page (requires page)
+ *           default: 10
+ *         description: Items per page (Mandatory, defaults to 10)
  *       - in: query
  *         name: sort
  *         schema:
@@ -271,17 +274,10 @@ router.post('/', userAuth, reviewsController.createReview as any);
  *                   items:
  *                     $ref: '#/components/schemas/RatingDistributionItem'
  *                 meta:
- *                   description: Present only when page & limit query params are provided
- *                   allOf:
- *                     - $ref: '#/components/schemas/PaginationMeta'
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       500:
  *         description: Internal server error
  */
-router.get(
-  '/establishment/:establishmentId',
-  optionalAuth,
-  reviewsController.getEstablishmentReviews as any
-);
 
 /**
  * @swagger
@@ -317,11 +313,6 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get(
-  '/establishment/:establishmentId/distribution',
-  optionalAuth,
-  reviewsController.getReviewsDistribution
-);
 
 /**
  * @swagger
@@ -371,17 +362,12 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get(
-  '/establishment/:establishmentId/my',
-  userAuth,
-  reviewsController.getUserReviewsForEstablishment
-);
 
 /**
  * @swagger
  * /reviews/my:
  *   get:
- *     summary: Get all reviews left by the current user
+ *     summary: Get all reviews left by the current user (Paginated)
  *     tags: [Reviews]
  *     security:
  *       - bearerAuth: []
@@ -391,13 +377,15 @@ router.get(
  *         schema:
  *           type: integer
  *           example: 1
- *         description: Page number (requires limit)
+ *           default: 1
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           example: 10
- *         description: Items per page (requires page)
+ *           default: 10
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: User's reviews retrieved successfully
@@ -422,15 +410,12 @@ router.get(
  *                           name:
  *                             type: string
  *                 meta:
- *                   description: Present only when page & limit query params are provided
- *                   allOf:
- *                     - $ref: '#/components/schemas/PaginationMeta'
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Unauthorized — missing or invalid token
  *       500:
  *         description: Internal server error
  */
-router.get('/my', userAuth, reviewsController.getMyReviews);
 
 /**
  * @swagger
@@ -472,26 +457,10 @@ router.get('/my', userAuth, reviewsController.getMyReviews);
  *                   $ref: '#/components/schemas/PublicEstablishment'
  *       400:
  *         description: Invalid reviewId or edit window has expired (>24 hours)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Reviews can only be edited within 24 hours of creation
  *       401:
  *         description: Unauthorized — missing or invalid token
  *       403:
  *         description: Forbidden — you can only update your own reviews
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: You can only update your own reviews
  *       404:
  *         description: Review not found
  *       500:
@@ -530,20 +499,8 @@ router.get('/my', userAuth, reviewsController.getMyReviews);
  *         description: Unauthorized — missing or invalid token
  *       403:
  *         description: Forbidden — you can only delete your own reviews
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: You can only delete your own reviews
  *       404:
  *         description: Review not found
  *       500:
  *         description: Internal server error
  */
-router.patch('/:reviewId', userAuth, reviewsController.updateReview);
-router.delete('/:reviewId', userAuth, reviewsController.deleteReview);
-
-export default router;

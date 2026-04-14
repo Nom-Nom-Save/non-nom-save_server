@@ -11,11 +11,20 @@ import {
 
 const router = Router();
 
+router.get('/public/:establishmentId', getPublicMenu);
+router.get('/item/:menuId', getMenuItem);
+router.post('/', establishmentAuth, addToMenu);
+router.get('/', establishmentAuth, getMenu);
+router.patch('/:id/status', establishmentAuth, changeStatus);
+router.patch('/:id', establishmentAuth, updateMenu);
+
+export default router;
+
 /**
  * @swagger
  * /menu/public/{establishmentId}:
  *   get:
- *     summary: Get all active menu items for a specific establishment (Public)
+ *     summary: Get all active menu items for a specific establishment (Public, Paginated)
  *     tags: [Menu]
  *     parameters:
  *       - in: path
@@ -24,10 +33,12 @@ const router = Router();
  *         schema: { type: string, format: uuid }
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: Success
@@ -70,7 +81,6 @@ const router = Router();
  *                           allergens: { type: array, items: { type: string } }
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
-router.get('/public/:establishmentId', getPublicMenu);
 
 /**
  * @swagger
@@ -130,7 +140,6 @@ router.get('/public/:establishmentId', getPublicMenu);
  *               properties:
  *                 message: { type: string }
  */
-router.get('/item/:menuId', getMenuItem);
 
 /**
  * @swagger
@@ -184,23 +193,24 @@ router.get('/item/:menuId', getMenuItem);
  *                         startTime: { type: string, format: date-time }
  *                         endTime: { type: string, format: date-time }
  */
-router.post('/', establishmentAuth, addToMenu);
 
 /**
  * @swagger
  * /menu:
  *   get:
- *     summary: Get establishment menu
+ *     summary: Get establishment menu (Paginated)
  *     tags: [Menu]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
- *         schema: { type: integer, example: 1 }
+ *         schema: { type: integer, example: 1, default: 1 }
+ *         description: Page number (Mandatory, defaults to 1)
  *       - in: query
  *         name: limit
- *         schema: { type: integer, example: 10 }
+ *         schema: { type: integer, example: 10, default: 10 }
+ *         description: Items per page (Mandatory, defaults to 10)
  *     responses:
  *       200:
  *         description: Success
@@ -243,7 +253,6 @@ router.post('/', establishmentAuth, addToMenu);
  *                           allergens: { type: array, items: { type: string } }
  *                 meta: { $ref: '#/components/schemas/PaginationMeta' }
  */
-router.get('/', establishmentAuth, getMenu);
 
 /**
  * @swagger
@@ -277,7 +286,6 @@ router.get('/', establishmentAuth, getMenu);
  *               properties:
  *                 message: { type: string }
  */
-router.patch('/:id/status', establishmentAuth, changeStatus);
 
 /**
  * @swagger
@@ -330,6 +338,3 @@ router.patch('/:id/status', establishmentAuth, changeStatus);
  *               properties:
  *                 message: { type: string }
  */
-router.patch('/:id', establishmentAuth, updateMenu);
-
-export default router;
