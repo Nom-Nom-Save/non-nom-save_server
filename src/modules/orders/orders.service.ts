@@ -74,16 +74,20 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
 
     const closeTime = itemsData[0].closeTime;
 
-    const expiresAt = sql`
-      CASE 
-        WHEN ${closeTime} IS NOT NULL AND ${currentTime} < ${closeTime}::time
-        THEN LEAST(
-          timezone('utc', now()) + interval '2 hours',
-          (timezone('utc', now())::date + ${closeTime}::time)::timestamp
-        )
-        ELSE timezone('utc', now()) + interval '2 hours'
-      END
-    `;
+    const expiresAt = sql`(
+      SELECT 
+        CASE 
+          WHEN (regexp_match(${establishments.workingHours}, ${regex}))[2] IS NOT NULL 
+               AND (now() at time zone 'utc')::time < (regexp_match(${establishments.workingHours}, ${regex}))[2]::time
+          THEN LEAST(
+            timezone('utc', now()) + interval '2 hours',
+            (timezone('utc', now())::date + (regexp_match(${establishments.workingHours}, ${regex}))[2]::time)::timestamp
+          )
+          ELSE timezone('utc', now()) + interval '2 hours'
+        END
+      FROM ${establishments}
+      WHERE ${eq(establishments.id, establishmentId)}
+    )`;
 
     let totalPrice = 0;
     for (const item of input.items) {
