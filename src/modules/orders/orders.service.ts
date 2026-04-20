@@ -19,6 +19,7 @@ import {
 } from './types/orders.type';
 import { PaginationParams } from '../../shared/types/pagination.type';
 import { UserType } from '../auth/types/auth.types';
+import { AppError } from '../../shared/utils/app.error';
 
 export const createOrder = async (userId: string, input: CreateOrderInput) => {
   return await db.transaction(async tx => {
@@ -52,10 +53,14 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
         workingHours: establishments.workingHours,
         isOpen: isOpenSql,
         closeTime: closeTimeSql,
+        productName: products.name,
+        boxName: boxes.name,
       })
       .from(menuPrices)
       .innerJoin(menu, eq(menuPrices.menuItemId, menu.id))
       .innerJoin(establishments, eq(menu.establishmentId, establishments.id))
+      .leftJoin(products, eq(menu.itemId, products.id))
+      .leftJoin(boxes, eq(menu.itemId, boxes.id))
       .where(inArray(menuPrices.id, menuPriceIds));
 
     if (itemsData.length !== input.items.length) {
@@ -90,16 +95,33 @@ export const createOrder = async (userId: string, input: CreateOrderInput) => {
     )`;
 
     let totalPrice = 0;
+    const errors: string[] = [];
     for (const item of input.items) {
       const dbItem = itemsData.find(d => d.menuPrice.id === item.menuPriceId);
       if (!dbItem) continue;
 
+      const itemName = dbItem.productName || dbItem.boxName || 'Unknown Item';
+
+      if (dbItem.menuItem.status !== 'Active') {
+        const statusMessage =
+          dbItem.menuItem.status === 'SoldOut' ? 'is sold out' : 'is currently unavailable';
+        errors.push(`'${itemName}' ${statusMessage} (Status: ${dbItem.menuItem.status})`);
+        continue;
+      }
+
       if (dbItem.menuPrice.availableQuantity < item.quantity) {
-        throw new Error(`Not enough quantity for item ${dbItem.menuItem.id}`);
+        errors.push(
+          `'${itemName}': insufficient quantity (Available: ${dbItem.menuPrice.availableQuantity}, Requested: ${item.quantity})`
+        );
+        continue;
       }
 
       const price = dbItem.menuPrice.discountPrice || dbItem.menuPrice.originalPrice;
       totalPrice += price * item.quantity;
+    }
+
+    if (errors.length > 0) {
+      throw new AppError(errors.join('\n'), 400);
     }
 
     const [newOrder] = await tx

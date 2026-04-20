@@ -103,7 +103,7 @@ export default router;
  *           Bad request:
  *           - One or more items not found in menu
  *           - All items in an order must be from the same establishment
- *           - Not enough quantity for item
+ *           - Insufficient quantity for item "Item Name". Available: 5, requested: 10
  *           - Establishment is currently closed
  *       403:
  *         description: Only users can create orders
