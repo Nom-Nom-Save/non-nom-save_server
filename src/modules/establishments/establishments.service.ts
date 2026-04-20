@@ -368,3 +368,16 @@ export const getAllEstablishmentCities = async (): Promise<string[]> => {
 
   return Array.from(citiesSet).sort();
 };
+
+export const getEstablishmentsByIds = async (ids: string[]): Promise<PublicEstablishment[]> => {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const results = await db
+    .select(publicFields)
+    .from(establishments)
+    .where(inArray(establishments.id, ids));
+
+  return results as PublicEstablishment[];
+};

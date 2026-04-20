@@ -5,6 +5,7 @@ import {
   getEstablishmentByIdPrivate,
   getFilteredEstablishments,
   getAllEstablishmentCities,
+  getEstablishmentsByIds as getEstablishmentsByIdsService,
 } from './establishments.service';
 import { isFavorite } from '../users/users.service';
 import {
@@ -231,4 +232,17 @@ export const getAvailableCities: ExpressHandler = async (_, res) => {
   } catch (error: unknown) {
     res.status(500).json({ error: 'Internal server error' });
   }
+};
+
+export const getEstablishmentsByIds: ExpressHandler = async (req, res) => {
+  const { ids } = req.query;
+  const idList = typeof ids === 'string' ? ids.split(',') : [];
+
+  if (!idList.length) {
+    res.status(400).json({ error: 'ids are required' });
+    return;
+  }
+
+  const establishments = await getEstablishmentsByIdsService(idList);
+  res.status(200).json({ establishments });
 };
