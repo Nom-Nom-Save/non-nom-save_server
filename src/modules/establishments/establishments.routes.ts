@@ -6,6 +6,7 @@ import {
   getNearbyEstablishments,
   getEstablishmentPrivate,
   getAvailableCities,
+  getEstablishmentsByIds,
 } from './establishments.controller';
 import { establishmentAuth, optionalAuth } from '../../shared/middleware/auth.middleware';
 
@@ -15,6 +16,7 @@ router.get('/profile', establishmentAuth, getEstablishmentPrivate);
 router.get('/', getEstablishments);
 router.get('/nearby', getNearbyEstablishments);
 router.get('/cities', getAvailableCities);
+router.get('/by-ids', getEstablishmentsByIds);
 router.get('/:establishmentId', optionalAuth, getEstablishment);
 router.patch('/:establishmentId', establishmentAuth, updateEstablishmentProfile);
 
@@ -315,4 +317,37 @@ export default router;
  *         description: Establishment not found
  *       500:
  *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /establishments/by-ids:
+ *   get:
+ *     summary: Get multiple establishments by their IDs
+ *     description: Returns a list of establishments matching the provided IDs. Used for cart page to fetch only relevant establishments.
+ *     tags: [Establishments]
+ *     parameters:
+ *       - in: query
+ *         name: ids
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Comma-separated list of establishment UUIDs
+ *         example: "uuid1,uuid2,uuid3"
+ *     responses:
+ *       200:
+ *         description: Establishments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 establishments:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Establishment'
+ *       400:
+ *         description: ids query parameter is required
+ *       500:
+ *         description: Internal server error
  */
