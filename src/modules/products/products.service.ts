@@ -1,5 +1,6 @@
 import { db } from '../../database';
 import { products } from '../../database/schema/products.schema';
+import { menu } from '../../database/schema/menu.schema';
 import { productTypes } from '../../database/schema/product_types.schema';
 import { productAllergens } from '../../database/schema/product_allergens.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
@@ -164,6 +165,17 @@ export const updateProduct = async (
 };
 
 export const deleteProduct = async (id: string): Promise<boolean> => {
+  const isUsed = await db.select({ id: menu.id }).from(menu).where(eq(menu.itemId, id)).limit(1);
+
+  if (isUsed.length > 0) {
+    const result = await db
+      .update(products)
+      .set({ boundTo: '1654' })
+      .where(eq(products.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
   const result = await db.delete(products).where(eq(products.id, id)).returning();
   return result.length > 0;
 };

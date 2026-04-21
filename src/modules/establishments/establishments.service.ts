@@ -185,6 +185,10 @@ export const updateEstablishment = async (
   establishmentId: string,
   updateData: UpdateEstablishmentInput
 ): Promise<Establishment | null> => {
+  if (updateData.boundTo === '0' || updateData.boundTo === '1654') {
+    throw new Error('Invalid boundTo value');
+  }
+
   const dataToUpdate = { ...updateData };
 
   if (updateData.address) {

@@ -164,6 +164,11 @@ export const updateEstablishmentProfile: ExpressHandler = async (req, res) => {
 
     const updateData: UpdateEstablishmentInput = req.body;
 
+    if (updateData.boundTo === '0' || updateData.boundTo === '1654') {
+      res.status(400).json({ error: 'Invalid boundTo value' });
+      return;
+    }
+
     const existingEstablishment = await getEstablishmentById(establishmentId);
     if (!existingEstablishment) {
       res.status(404).json({ error: 'Establishment not found' });

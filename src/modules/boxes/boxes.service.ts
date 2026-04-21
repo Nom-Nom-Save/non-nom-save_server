@@ -1,5 +1,6 @@
 import { db } from '../../database';
 import { boxes } from '../../database/schema/boxes.schema';
+import { menu } from '../../database/schema/menu.schema';
 import { typeBoxes } from '../../database/schema/type_boxes.schema';
 import { boxItems } from '../../database/schema/box_items.schema';
 import { typesOfProducts } from '../../database/schema/types_of_products.schema';
@@ -228,6 +229,17 @@ export const updateBox = async (id: string, data: UpdateBoxInput): Promise<Box |
 };
 
 export const deleteBox = async (id: string): Promise<boolean> => {
+  const isUsed = await db.select({ id: menu.id }).from(menu).where(eq(menu.itemId, id)).limit(1);
+
+  if (isUsed.length > 0) {
+    const result = await db
+      .update(boxes)
+      .set({ boundTo: '1654' })
+      .where(eq(boxes.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
   const result = await db.delete(boxes).where(eq(boxes.id, id)).returning();
   return result.length > 0;
 };
